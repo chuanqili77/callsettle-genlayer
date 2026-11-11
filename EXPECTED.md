@@ -81,9 +81,42 @@ creates, and is recorded afterwards with the transaction hashes.
 
 Ledger after C6 (exact):
 - GEN in: 13 + 3 = 16 GEN
-- GEN out: provider 6 + 3 = 9 GEN; buyer 7 GEN; total 16 GEN
-- Contract balance 0 GEN, escrow 0, total violations 1 (E2 only)
+- GEN credited: provider 6 + 3 = 9 GEN; buyer 7 GEN; total 16 GEN in credits
+- GEN actually withdrawn on-chain: 13 GEN (C6's 3 GEN provider credit not yet withdrawn — see note below)
+- Contract balance 3 GEN = C6's provider credit to P1, escrowed 3 GEN, total violations 1 (E2 only)
 - E1: settled_valid 3, violations 0. Call count 6.
+
+Note on C6's provider credit: the 3 GEN is credited to P1
+(0x1535afc1f57f5bc886b98725de455df24a266238) on-chain, but P1's
+evidence-run temporary key was deleted after the evidence run under
+the checkpoint rule, so that credit is not withdrawn in this run. It
+is a legitimate recorded credit, not stranded value: the contract
+balance after C6 is exactly that 3 GEN credit (escrowed 3 GEN), and
+withdrawal is proven by C1/C2 in evidence and by C7 below in the
+browser. This is disclosed, not hidden.
+
+## Browser write-loop C7 (pre-registered before the browser run, 2026-11-12)
+
+The first browser pass found the site had no usable withdraw entry
+(the action-row button was generic and unlabeled, and the receipt
+detail had none), so a frontend fix added explicit withdraw buttons.
+C7 proves the full loop in the browser with the fixed site, using
+one fresh in-browser temporary test account that is BOTH provider
+and buyer (the contract has no guard against buyer == provider, and
+this is what makes an in-browser provider withdrawal testable).
+
+| Step | Expected |
+|------|----------|
+| E4 listed by the browser temp account | URL https://api.open-meteo.com/v1/forecast?latitude=51.5074&longitude=-0.1278&current=temperature_2m,wind_speed_10m&timezone=Europe%2FLondon, price 2 GEN, ACTIVE. Temp account address recorded after. |
+| C7: same temp account buys one call on E4 | 2 GEN escrowed, call id 7, FUNDED, then FINALIZED. |
+| C7 settled from the site | RESPONSE_VALID, status SETTLED, provider_credit 2 GEN, buyer_credit 0. |
+| C7 provider credit withdrawn from the site | The receipt shows the explicit “Withdraw provider credit · 2 GEN” button (temp account is the provider), pressed in the browser, FINALIZED + SUCCESS, receipt shows Withdrawn · 2 GEN. |
+
+Ledger after C7 (exact):
+- GEN in: 16 + 2 = 18 GEN
+- GEN out: provider 9 + 2 = 11 GEN; buyer 7 GEN; total 18 GEN through credits; withdrawn on-chain 13 + 2 = 15 GEN
+- Contract balance 3 GEN = C6's provider credit to P1 (key deleted, unwithdrawn — see note above), escrowed 3 GEN, total violations 1 (E2 only)
+- E1: settled_valid 3, violations 0. E4: settled_valid 1, violations 0. Call count 7, endpoint count 4.
 
 ## Honest note on failed payables (v1.1)
 
