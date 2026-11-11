@@ -1,0 +1,19 @@
+{
+  "network": "Stable Studionet",
+  "chain_id": 61999,
+  "rpc": "https://studio.genlayer.com/api",
+  "contract_address": "0x445Fcd2bBCEbF42C7EE3946644ADdb64698E66E2",
+  "deploy_tx": "0x78b128620a88b2e4e65a7bcf43057b72f8b66f7d656f1af7a1fda969956ad24c",
+  "explorer": "https://explorer-studio.genlayer.com/address/0x445Fcd2bBCEbF42C7EE3946644ADdb64698E66E2",
+  "source_sha256": "31d4db85b85680d08d8a697642fd5579d633f88c911c940c25e940a5f2fd551b",
+  "source_bytes": 15989,
+  "source_file": "contracts/callsettle.py",
+  "byte_parity": "BYTE_PARITY_MATCH: TRUE",
+  "wallets": {
+    "P1": "0x509d30c3dcecb3e7e6be3848c49385df8a5c84a6",
+    "B1": "0x19f5bbc57654916d5b24ff6886a6a46317ac93a1",
+    "B2": "0x7c5b0813924efa46fcdd41922574d31ba7924a7e",
+    "OUT": "0x83409fa5fc848a30f59594c7b5a5220edef2ff5b"
+  },
+  "note": "Temp accounts generated for this evidence run only."
+}

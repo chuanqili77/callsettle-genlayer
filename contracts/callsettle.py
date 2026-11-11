@@ -1,0 +1,433 @@
+# { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
+"""CallSettle: pay-per-call settlement for public APIs on GenLayer Studionet.
+
+Protocol callsettle-1. A provider lists a public, keyless API endpoint
+with a per-call price (1-10 GEN). A buyer pays for one call: the exact
+price is escrowed. Anyone may then trigger settlement: GenLayer
+validators each independently fetch the endpoint URL and check the live
+response against the response schema agreed on-chain at listing time
+(HTTP 200, JSON, current.temperature_2m a number in -60..60,
+current.time a string). They must agree exactly on verdict +
+temperature_band + has_required_fields, or the call stays FUNDED and
+settlement can be retried (fail-closed).
+
+Verdicts (deterministic code, no LLM anywhere in this contract):
+  RESPONSE_VALID   -> escrow pays the provider, no violation
+  RESPONSE_INVALID -> escrow refunds the buyer, provider violations +1
+  UNREACHABLE      -> escrow refunds the buyer, no violation
+Settlement never moves money directly: it records a pull-payment
+credit; the entitled party withdraws it with withdraw(). A failed
+payable call takes no money; a disagreed settlement changes nothing.
+
+Temperature is a decision-free diagnostic only: it is stored as a
+10-degree band (LT0 / 0_10 / 10_20 / 20_30 / GT30), never as a float,
+never as a decision field. Validators fetch inside the same consensus
+round, so drift is small; a band flip at a boundary can only produce
+MAJORITY_DISAGREE and a retry, never a wrong settlement.
+
+Capacity (checked in the contract, mathematically consistent):
+  MAX_ENDPOINTS_PER_PROVIDER = 8, MAX_ENDPOINTS_TOTAL = 32.
+  8 * 4 = 32: one provider filling all 8 slots never blocks another
+  provider from listing, and the total cap can only be reached by at
+  least 4 providers. No TenderCourt-style capacity deadlock: the per-
+  provider cap and the total cap are independent counts, and a full
+  provider fails with a clear error instead of a stuck state.
+  URL <= 256 chars, schema_note 10..280 chars.
+
+Sender-bound roles: only the buyer can cancel a FUNDED call; only the
+entitled party of a call can withdraw its credit; settle_call is open
+to anyone because the outcome is decided by consensus, not by the
+caller. No time gates anywhere (Studionet has no clock): every
+transition is an explicit action.
+
+Known limits (neutral, product-scope):
+  * Public, keyless endpoints only; an endpoint that needs an API key
+    cannot be listed meaningfully, because validators fetch without
+    credentials.
+  * An endpoint has no delist action in v1: a listed endpoint stays
+    ACTIVE. A provider that wants to stop selling simply stops being
+    called; no funds are at risk from a stale listing because every
+    call is paid per call and settled against the live response.
+  * A call left FUNDED whose buyer disappears can still be settled by
+    anyone, so funds are never stuck; the buyer can also cancel it
+    while FUNDED.
+"""
+from genlayer import *
+import json
+
+GEN_WEI = 1000000000000000000  # 1 GEN = 10^18 wei
+MIN_PRICE_GEN = 1
+MAX_PRICE_GEN = 10
+MAX_ENDPOINTS_PER_PROVIDER = 8
+MAX_ENDPOINTS_TOTAL = 32
+MAX_URL_CHARS = 256
+MAX_NOTE_CHARS = 280
+MIN_NOTE_CHARS = 10
+
+VERDICTS = ["RESPONSE_VALID", "RESPONSE_INVALID", "UNREACHABLE"]
+BANDS = ["LT0", "0_10", "10_20", "20_30", "GT30", "NONE"]
+
+
+def fail(s):
+    raise gl.vm.UserError(s)
+
+
+def packed(x):
+    return json.dumps(x, sort_keys=True, separators=(',', ':'))
+
+
+def _band(temp):
+    if temp < 0:
+        return 'LT0'
+    if temp < 10:
+        return '0_10'
+    if temp < 20:
+        return '10_20'
+    if temp < 30:
+        return '20_30'
+    return 'GT30'
+
+
+def _check_body(text):
+    """Deterministic schema check on the fetched response body.
+
+    Returns (has_required_fields, verdict, band). No LLM: the response
+    is data to check, never instructions. Instruction-like text inside
+    a body cannot change the verdict, because only the JSON shape is
+    examined.
+    """
+    try:
+        data = json.loads(text)
+    except Exception:
+        return False, 'RESPONSE_INVALID', 'NONE'
+    if not isinstance(data, dict):
+        return False, 'RESPONSE_INVALID', 'NONE'
+    cur = data.get('current')
+    if not isinstance(cur, dict):
+        return False, 'RESPONSE_INVALID', 'NONE'
+    temp = cur.get('temperature_2m')
+    tstr = cur.get('time')
+    if not isinstance(tstr, str) or not tstr:
+        return False, 'RESPONSE_INVALID', 'NONE'
+    if isinstance(temp, bool) or not isinstance(temp, (int, float)):
+        return False, 'RESPONSE_INVALID', 'NONE'
+    if not -60 <= temp <= 60:
+        return False, 'RESPONSE_INVALID', 'NONE'
+    return True, 'RESPONSE_VALID', _band(temp)
+
+
+def _fetch_once(url):
+    """One validator's independent fetch + check. Never raises: a fetch
+    failure is UNREACHABLE, a bad body is RESPONSE_INVALID."""
+    try:
+        response = gl.nondet.web.request(url, method='GET')
+    except Exception:
+        return {'verdict': 'UNREACHABLE', 'temperature_band': 'NONE',
+                'has_required_fields': False}
+    status = getattr(response, 'status', None)
+    if status != 200:
+        return {'verdict': 'UNREACHABLE', 'temperature_band': 'NONE',
+                'has_required_fields': False}
+    body = response.body
+    if isinstance(body, bytes):
+        try:
+            text = body.decode('utf-8')
+        except Exception:
+            return {'verdict': 'RESPONSE_INVALID',
+                    'temperature_band': 'NONE', 'has_required_fields': False}
+    elif isinstance(body, str):
+        text = body
+    else:
+        return {'verdict': 'RESPONSE_INVALID', 'temperature_band': 'NONE',
+                'has_required_fields': False}
+    has, verdict, band = _check_body(text)
+    return {'verdict': verdict, 'temperature_band': band,
+            'has_required_fields': has}
+
+
+def _validate_check(res):
+    if not isinstance(res, dict):
+        fail('CHECK_RESULT')
+    verdict = res.get('verdict')
+    band = res.get('temperature_band')
+    has = res.get('has_required_fields')
+    if verdict not in VERDICTS:
+        fail('CHECK_VERDICT')
+    if band not in BANDS:
+        fail('CHECK_BAND')
+    if not isinstance(has, bool):
+        fail('CHECK_FIELDS')
+    if verdict == 'RESPONSE_VALID' and (band == 'NONE' or not has):
+        fail('CHECK_VALID')
+    if verdict in ('RESPONSE_INVALID', 'UNREACHABLE') and has:
+        fail('CHECK_INVALID')
+    return {'verdict': verdict, 'temperature_band': band,
+            'has_required_fields': has}
+
+
+def _run_check(url):
+    def leader_fn():
+        return _validate_check(_fetch_once(url))
+
+    def validator_fn(result):
+        if not isinstance(result, gl.vm.Return):
+            try:
+                leader_fn()
+            except Exception:
+                return True
+            return False
+        try:
+            mine = _validate_check(_fetch_once(url))
+        except Exception:
+            return False
+        leader = result.calldata
+        if not isinstance(leader, dict):
+            return False
+        return (leader.get('verdict') == mine.get('verdict')
+                and leader.get('temperature_band') == mine.get('temperature_band')
+                and leader.get('has_required_fields') == mine.get('has_required_fields'))
+
+    return gl.vm.run_nondet_unsafe(leader_fn, validator_fn)
+
+
+@gl.evm.contract_interface
+class _Recipient:
+    class View:
+        pass
+
+    class Write:
+        pass
+
+
+class CallSettle(gl.Contract):
+    endpoints: TreeMap[str, str]
+    calls: TreeMap[str, str]
+    provider_counts: TreeMap[str, str]
+    next_endpoint_id: u32
+    next_call_id: u32
+    total_endpoints: u32
+    total_received: u256
+    total_withdrawn: u256
+
+    def __init__(self):
+        self.endpoints = TreeMap()
+        self.calls = TreeMap()
+        self.provider_counts = TreeMap()
+        self.next_endpoint_id = u32(1)
+        self.next_call_id = u32(1)
+        self.total_endpoints = u32(0)
+        self.total_received = u256(0)
+        self.total_withdrawn = u256(0)
+
+    def _load_endpoint(self, endpoint_id):
+        raw = self.endpoints.get(str(endpoint_id), '')
+        if not raw:
+            fail('ENDPOINT_NOT_FOUND')
+        return json.loads(raw)
+
+    def _save_endpoint(self, e):
+        self.endpoints[str(e['endpoint_id'])] = packed(e)
+        return packed(e)
+
+    def _load_call(self, call_id):
+        raw = self.calls.get(str(call_id), '')
+        if not raw:
+            fail('CALL_NOT_FOUND')
+        return json.loads(raw)
+
+    def _save_call(self, c):
+        self.calls[str(c['call_id'])] = packed(c)
+        return packed(c)
+
+    def _provider_count(self, provider):
+        raw = self.provider_counts.get(provider, '')
+        return int(raw) if raw else 0
+
+    @gl.public.write
+    def list_endpoint(self, url: str, price_gen: int,
+                      schema_note: str) -> str:
+        if not isinstance(url, str) or not 8 <= len(url.strip()) <= MAX_URL_CHARS:
+            fail('URL_LENGTH')
+        url = url.strip()
+        if not url.startswith('https://'):
+            fail('URL_HTTPS')
+        if not isinstance(price_gen, int) or isinstance(price_gen, bool) \
+                or not MIN_PRICE_GEN <= price_gen <= MAX_PRICE_GEN:
+            fail('PRICE')
+        if not isinstance(schema_note, str) \
+                or not MIN_NOTE_CHARS <= len(schema_note.strip()) <= MAX_NOTE_CHARS:
+            fail('NOTE_LENGTH')
+        provider = str(gl.message.sender_address).lower()
+        if self._provider_count(provider) >= MAX_ENDPOINTS_PER_PROVIDER:
+            fail('PROVIDER_ENDPOINT_LIMIT')
+        if int(self.total_endpoints) >= MAX_ENDPOINTS_TOTAL:
+            fail('TOTAL_ENDPOINT_LIMIT')
+        endpoint_id = int(self.next_endpoint_id)
+        self.next_endpoint_id = u32(endpoint_id + 1)
+        self.total_endpoints = u32(int(self.total_endpoints) + 1)
+        self.provider_counts[provider] = str(self._provider_count(provider) + 1)
+        e = {
+            'endpoint_id': endpoint_id,
+            'provider': provider,
+            'url': url,
+            'price_gen': price_gen,
+            'price_wei': price_gen * GEN_WEI,
+            'schema_note': schema_note.strip(),
+            'status': 'ACTIVE',
+            'calls': 0,
+            'settled_valid': 0,
+            'violations': 0,
+        }
+        return self._save_endpoint(e)
+
+    @gl.public.write.payable
+    def call_api(self, endpoint_id: int) -> str:
+        e = self._load_endpoint(endpoint_id)
+        if e['status'] != 'ACTIVE':
+            fail('ENDPOINT_NOT_ACTIVE')
+        if gl.message.value != u256(int(e['price_wei'])):
+            fail('VALUE_MUST_EQUAL_PRICE')
+        buyer = str(gl.message.sender_address).lower()
+        call_id = int(self.next_call_id)
+        self.next_call_id = u32(call_id + 1)
+        self.total_received = self.total_received + u256(int(e['price_wei']))
+        e['calls'] = int(e['calls']) + 1
+        self._save_endpoint(e)
+        c = {
+            'call_id': call_id,
+            'endpoint_id': int(endpoint_id),
+            'buyer': buyer,
+            'provider': e['provider'],
+            'price_gen': int(e['price_gen']),
+            'price_wei': int(e['price_wei']),
+            'status': 'FUNDED',
+            'verdict': '',
+            'temperature_band': '',
+            'has_required_fields': False,
+            'buyer_credit': 0,
+            'provider_credit': 0,
+            'buyer_withdrawn': False,
+            'provider_withdrawn': False,
+        }
+        return self._save_call(c)
+
+    @gl.public.write
+    def settle_call(self, call_id: int) -> str:
+        c = self._load_call(call_id)
+        if c['status'] != 'FUNDED':
+            fail('CALL_NOT_FUNDED')
+        e = self._load_endpoint(int(c['endpoint_id']))
+        checked = _run_check(e['url'])
+        c['verdict'] = checked['verdict']
+        c['temperature_band'] = checked['temperature_band']
+        c['has_required_fields'] = checked['has_required_fields']
+        if checked['verdict'] == 'RESPONSE_VALID':
+            c['status'] = 'SETTLED'
+            c['provider_credit'] = int(c['price_wei'])
+            e['settled_valid'] = int(e['settled_valid']) + 1
+        elif checked['verdict'] == 'RESPONSE_INVALID':
+            c['status'] = 'REFUNDED'
+            c['buyer_credit'] = int(c['price_wei'])
+            e['violations'] = int(e['violations']) + 1
+        else:  # UNREACHABLE
+            c['status'] = 'REFUNDED'
+            c['buyer_credit'] = int(c['price_wei'])
+        self._save_endpoint(e)
+        return self._save_call(c)
+
+    @gl.public.write
+    def cancel_call(self, call_id: int) -> str:
+        c = self._load_call(call_id)
+        sender = str(gl.message.sender_address).lower()
+        if sender != c['buyer']:
+            fail('ONLY_BUYER_CAN_CANCEL')
+        if c['status'] != 'FUNDED':
+            fail('CALL_NOT_FUNDED')
+        c['status'] = 'CANCELLED'
+        c['buyer_credit'] = int(c['price_wei'])
+        return self._save_call(c)
+
+    @gl.public.write
+    def withdraw(self, call_id: int) -> str:
+        c = self._load_call(call_id)
+        sender = str(gl.message.sender_address).lower()
+        amount = 0
+        role = ''
+        if sender == c['provider'] and int(c['provider_credit']) > 0 \
+                and not c['provider_withdrawn']:
+            amount = int(c['provider_credit'])
+            role = 'provider'
+        elif sender == c['buyer'] and int(c['buyer_credit']) > 0 \
+                and not c['buyer_withdrawn']:
+            amount = int(c['buyer_credit'])
+            role = 'buyer'
+        else:
+            fail('NO_CREDIT')
+        if role == 'provider':
+            c['provider_withdrawn'] = True
+        else:
+            c['buyer_withdrawn'] = True
+        self._save_call(c)
+        self.total_withdrawn = self.total_withdrawn + u256(amount)
+        _Recipient(Address(sender)).emit_transfer(value=u256(amount))
+        return packed({'call_id': int(call_id), 'role': role,
+                       'withdrawn_wei': amount, 'sender': sender})
+
+    @gl.public.view
+    def get_protocol(self) -> str:
+        return 'callsettle-1'
+
+    @gl.public.view
+    def get_limits(self) -> str:
+        return packed({
+            'min_price_gen': MIN_PRICE_GEN,
+            'max_price_gen': MAX_PRICE_GEN,
+            'max_endpoints_per_provider': MAX_ENDPOINTS_PER_PROVIDER,
+            'max_endpoints_total': MAX_ENDPOINTS_TOTAL,
+            'max_url_chars': MAX_URL_CHARS,
+            'max_note_chars': MAX_NOTE_CHARS,
+            'min_note_chars': MIN_NOTE_CHARS,
+        })
+
+    @gl.public.view
+    def get_endpoint(self, endpoint_id: int) -> str:
+        return self.endpoints.get(str(endpoint_id), '')
+
+    @gl.public.view
+    def get_all_endpoints(self) -> str:
+        out = []
+        for i in range(1, int(self.next_endpoint_id)):
+            raw = self.endpoints.get(str(i), '')
+            if raw:
+                out.append(json.loads(raw))
+        return packed(out)
+
+    @gl.public.view
+    def get_call(self, call_id: int) -> str:
+        return self.calls.get(str(call_id), '')
+
+    @gl.public.view
+    def get_all_calls(self) -> str:
+        out = []
+        for i in range(1, int(self.next_call_id)):
+            raw = self.calls.get(str(i), '')
+            if raw:
+                out.append(json.loads(raw))
+        return packed(out)
+
+    @gl.public.view
+    def get_counts(self) -> str:
+        violations = 0
+        for i in range(1, int(self.next_endpoint_id)):
+            raw = self.endpoints.get(str(i), '')
+            if raw:
+                violations += int(json.loads(raw)['violations'])
+        return packed({
+            'endpoint_count': int(self.total_endpoints),
+            'call_count': int(self.next_call_id) - 1,
+            'total_violations': violations,
+            'total_received_wei': int(self.total_received),
+            'total_withdrawn_wei': int(self.total_withdrawn),
+            'contract_balance_wei': int(self.balance),
+            'escrowed_wei': int(self.total_received - self.total_withdrawn),
+        })
