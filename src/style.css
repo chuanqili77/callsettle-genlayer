@@ -189,6 +189,12 @@ section { margin-top: 44px; }
 .receipt-actions button { background: transparent; color: var(--ink); }
 .receipt-note { align-self: center; color: var(--ink-soft); font-size: 0.85rem; }
 .receipt-detail { margin-top: 12px; border-top: 1px dashed var(--rule); padding-top: 10px; display: grid; gap: 6px; font-size: 0.9rem; }
+.tx-row { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.tx-row > span:first-child { color: var(--ink-soft); font-weight: 600; }
+.tx-source { font-size: 0.8rem; color: var(--ink-soft); border: 1px solid var(--rule); border-radius: 3px; padding: 0 6px; }
+.withdraw-block { margin-top: 4px; }
+.withdraw-note { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; color: var(--ink-soft); font-size: 0.9rem; }
+.withdraw-note button { background: transparent; color: var(--ink); }
 
 /* Evidence. */
 .evidence-list { display: grid; gap: 0; border-top: 1px solid var(--ink); }

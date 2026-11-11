@@ -58,15 +58,33 @@ export interface Counts {
 // ISO form. It is NOT an on-chain finalization timestamp (Studionet
 // exposes no block timestamp to the UI); the UI labels it as a readback
 // time, never as "finalized at" a chain time.
+//
+// Retry note: a single read is three sequential RPC calls. A transient
+// network failure surfaces from viem as "An unknown RPC error
+// occurred. Details: Failed to fetch" — the trailing "Version:
+// viem@x.y.z" is viem's error footer, NOT a version probe (the only
+// web3_clientVersion call in genlayer-js lives in the unused
+// MetaMask-snap helper, which this app never calls). Retrying the
+// whole read absorbs the blip instead of leaving a stale error line
+// next to an otherwise good FINALIZED readback.
 export async function readAll(): Promise<{ endpoints: EndpointRec[]; calls: CallRec[]; counts: Counts; is_finalized_readback: boolean; at: string }> {
-  const rawE = await reader.readContract({ address: contractAddress() as `0x${string}`, functionName: 'get_all_endpoints', args: [], transactionHashVariant: 'latest-final' as any });
-  const rawC = await reader.readContract({ address: contractAddress() as `0x${string}`, functionName: 'get_all_calls', args: [], transactionHashVariant: 'latest-final' as any });
-  const rawN = await reader.readContract({ address: contractAddress() as `0x${string}`, functionName: 'get_counts', args: [], transactionHashVariant: 'latest-final' as any });
-  const endpoints = JSON.parse(rawE as unknown as string) as EndpointRec[];
-  const calls = JSON.parse(rawC as unknown as string) as CallRec[];
-  const counts = JSON.parse(rawN as unknown as string) as Counts;
-  const ok = typeof rawE === 'string' && Array.isArray(endpoints) && Array.isArray(calls) && typeof counts === 'object';
-  return { endpoints, calls, counts, is_finalized_readback: ok, at: new Date().toISOString() };
+  let lastErr: unknown = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const rawE = await reader.readContract({ address: contractAddress() as `0x${string}`, functionName: 'get_all_endpoints', args: [], transactionHashVariant: 'latest-final' as any });
+      const rawC = await reader.readContract({ address: contractAddress() as `0x${string}`, functionName: 'get_all_calls', args: [], transactionHashVariant: 'latest-final' as any });
+      const rawN = await reader.readContract({ address: contractAddress() as `0x${string}`, functionName: 'get_counts', args: [], transactionHashVariant: 'latest-final' as any });
+      const endpoints = JSON.parse(rawE as unknown as string) as EndpointRec[];
+      const calls = JSON.parse(rawC as unknown as string) as CallRec[];
+      const counts = JSON.parse(rawN as unknown as string) as Counts;
+      const ok = typeof rawE === 'string' && Array.isArray(endpoints) && Array.isArray(calls) && typeof counts === 'object';
+      return { endpoints, calls, counts, is_finalized_readback: ok, at: new Date().toISOString() };
+    } catch (e) {
+      lastErr = e;
+      if (attempt < 2) await sleep(1000 * (attempt + 1));
+    }
+  }
+  throw lastErr;
 }
 
 // ---- Tx lifecycle: hash saved immediately, timeout is "unknown" ----
@@ -87,6 +105,31 @@ export function clearPendingTx(hash: string) {
     const list: PendingTx[] = JSON.parse(localStorage.getItem(PENDING_KEY) || '[]');
     localStorage.setItem(PENDING_KEY, JSON.stringify(list.filter((p) => p.hash !== hash)));
   } catch { /* ignore */ }
+}
+
+// ---- My transaction history: append-only, this browser tab only ----
+// Pending txs are cleared once FINALIZED, so they cannot back the
+// receipt detail afterwards. Every hash this tab sends is also kept
+// here (keyed by hash, label updatable once the new call id is known
+// from the post-tx readback) so a receipt can always link its real
+// transactions. Nothing here leaves the browser.
+export interface MyTx { hash: string; label: string; savedAt: string; result: string }
+const MY_TXS_KEY = 'callsettle-my-txs';
+export function saveMyTx(hash: string, label: string) {
+  try {
+    const list: MyTx[] = JSON.parse(localStorage.getItem(MY_TXS_KEY) || '[]');
+    const at = new Date().toISOString();
+    const i = list.findIndex((p) => p.hash === hash);
+    if (i >= 0) list[i] = { hash, label, savedAt: list[i].savedAt || at, result: list[i].result || 'ok' };
+    else list.push({ hash, label, savedAt: at, result: 'ok' });
+    localStorage.setItem(MY_TXS_KEY, JSON.stringify(list.slice(-200)));
+  } catch { /* storage unavailable: hash is still shown on screen */ }
+}
+export function loadMyTxs(): MyTx[] {
+  try {
+    return (JSON.parse(localStorage.getItem(MY_TXS_KEY) || '[]') as MyTx[])
+      .map((m) => ({ ...m, result: m.result || 'ok' }));
+  } catch { return []; }
 }
 
 export class TxUnknownError extends Error {

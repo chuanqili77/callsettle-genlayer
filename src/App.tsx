@@ -14,7 +14,7 @@ import {
   loadDeployment, readAll, connectInjected, temporaryAccount,
   rotateTemporaryAccount, destroyTemporaryAccount, isTempKeyAcked,
   ackTempKey, tempPrivateKey, sendWriteOnly, waitFinalized, savePendingTx,
-  loadPendingTxs, clearPendingTx, leaderExecution, leaderPayload, txGood,
+  loadPendingTxs, clearPendingTx, saveMyTx, loadMyTxs, leaderExecution, leaderPayload, txGood,
   TxUnknownError, explorerTx, explorerAddress, shortAddr, gen, fmtReadbackTime,
   GEN_WEI, MIN_PRICE_GEN, MAX_PRICE_GEN, walletKind,
   type Deployment, type EndpointRec, type CallRec, type Counts, type Wallet,
@@ -76,6 +76,8 @@ export default function App() {
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [walletError, setWalletError] = useState('');
   const [evTxs, setEvTxs] = useState<EvTx[]>([]);
+  const [browserTxs, setBrowserTxs] = useState<EvTx[]>([]);
+  const [myTxs, setMyTxs] = useState<EvTx[]>(() => loadMyTxs());
   const [pending, setPending] = useState<{ hash: string; label: string }[]>(() => loadPendingTxs());
   const [busy, setBusy] = useState('');
   const [notice, setNotice] = useState('');
@@ -88,16 +90,21 @@ export default function App() {
   const [keyModal, setKeyModal] = useState<null | { action: () => Promise<void> }>(null);
   const [keyAcked, setKeyAcked] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [confirmDisc, setConfirmDisc] = useState(false);
+  const [panelKeyCopied, setPanelKeyCopied] = useState(false);
   const lastTxRef = useRef<{ hash: string; label: string } | null>(null);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (): Promise<Readback | null> => {
     setRefreshing(true);
     setRbError('');
     try {
       const data = await readAll();
       setRb(data);
+      return data;
     } catch (e: any) {
       setRbError(e?.message || String(e));
+      return null;
     } finally {
       setRefreshing(false);
     }
@@ -116,6 +123,13 @@ export default function App() {
             if (Array.isArray(j.transactions)) setEvTxs(j.transactions);
           }
         } catch { /* evidence file is optional on the live site */ }
+        try {
+          const resB = await fetch('./browser-transactions.json', { cache: 'no-store' });
+          if (resB.ok) {
+            const j = await resB.json();
+            if (Array.isArray(j.transactions)) setBrowserTxs(j.transactions);
+          }
+        } catch { /* browser-run file is optional on the live site */ }
       } catch (e: any) {
         setRbError(e?.message || String(e));
       }
@@ -154,6 +168,44 @@ export default function App() {
     });
   }
 
+  const shortTx = (h: string) => (h.length > 20 ? h.slice(0, 10) + '…' + h.slice(-6) : h);
+  const txActionLabel = (a: string) =>
+    a === 'call' ? t.txCall : a === 'settle' ? t.txSettle : a === 'cancel' ? t.txCancel : t.txWithdraw;
+  const txActionOrder = (a: string) =>
+    a === 'call' ? 0 : a === 'settle' ? 1 : a === 'cancel' ? 2 : 3;
+
+  // Every transaction that belongs to one call, from all three sources:
+  // the scripted evidence file, the browser-write-loop file, and this
+  // tab's own append-only history. Before a FINALIZED readback the
+  // caller shows '—' instead; after it, the real hash (short + link).
+  // A call made in this tab is first recorded as `call-e{id}` (its call
+  // id is unknown until the post-tx readback) and relabelled to
+  // `c{id}-call` by doWrite; the fallback below covers a tab that was
+  // reloaded before that relabelling ran.
+  function txsForCall(c: CallRec): { action: string; hash: string; result: string; verdict?: string; source: 'evidence' | 'browser' }[] {
+    const out: { action: string; hash: string; result: string; verdict?: string; source: 'evidence' | 'browser' }[] = [];
+    const push = (list: EvTx[], source: 'evidence' | 'browser') => {
+      for (const x of list) {
+        const m = new RegExp(`^c${c.call_id}-(call|settle|cancel|provider-withdraw|buyer-withdraw)$`).exec(x.label);
+        if (m) out.push({ action: m[1] === 'provider-withdraw' || m[1] === 'buyer-withdraw' ? 'withdraw' : m[1], hash: x.hash, result: x.result, verdict: x.verdict, source });
+      }
+    };
+    push(evTxs, 'evidence');
+    push(browserTxs, 'browser');
+    push(myTxs, 'browser');
+    if (!out.some((o) => o.action === 'call')) {
+      const cands = myTxs.filter((x) => x.label === `call-e${c.endpoint_id}`);
+      const newestOnEndpoint = Math.max(...calls.filter((x) => x.endpoint_id === c.endpoint_id).map((x) => x.call_id));
+      if (cands.length === 1 && c.call_id === newestOnEndpoint) {
+        out.push({ action: 'call', hash: cands[0].hash, result: cands[0].result || 'ok', source: 'browser' });
+      }
+    }
+    const seen = new Set<string>();
+    return out
+      .filter((o) => (seen.has(o.hash) ? false : (seen.add(o.hash), true)))
+      .sort((a, b) => txActionOrder(a.action) - txActionOrder(b.action));
+  }
+
   async function doWrite(label: string, fn: string, args: any[], value = 0n, payable = false) {
     if (!wallet) { setError(t.connectWallet); return; }
     if (wallet.mode === 'temporary' && payable && !isTempKeyAcked()) {
@@ -166,6 +218,8 @@ export default function App() {
       const hash = await sendWriteOnly(wallet, fn, args, value);
       lastTxRef.current = { hash, label };
       savePendingTx(hash, label);
+      saveMyTx(hash, label);
+      setMyTxs(loadMyTxs());
       setPending((ps) => [...ps, { hash, label }]);
       setNotice(t.waitingFinal + ' ' + hash);
       const receipt = await waitFinalized(hash);
@@ -176,7 +230,19 @@ export default function App() {
       } else {
         setNotice(t.done + ' — ' + hash);
       }
-      await refresh();
+      const data = await refresh();
+      if (fn === 'call_api' && data) {
+        // The new call id is only known after the readback: the newest
+        // call on this endpoint by this buyer is the one just made
+        // (writes are serial — the UI blocks concurrent sends).
+        const mine = data.calls
+          .filter((cc) => cc.endpoint_id === Number(args[0]) && cc.buyer === wallet.address.toLowerCase())
+          .sort((a, b) => b.call_id - a.call_id);
+        if (mine.length > 0) {
+          saveMyTx(hash, `c${mine[0].call_id}-call`);
+          setMyTxs(loadMyTxs());
+        }
+      }
     } catch (e: any) {
       if (e instanceof TxUnknownError) {
         setNotice(t.pendingNote + ' ' + e.hash);
@@ -245,7 +311,7 @@ export default function App() {
           <button className="lang-toggle" onClick={() => switchLang(lang === 'en' ? 'zh' : 'en')} aria-label="Switch language">
             {lang === 'en' ? '中文' : 'EN'}
           </button>
-          <button className="wallet-btn" onClick={wallet ? onDisconnect : onConnectInjected}>
+          <button className="wallet-btn" onClick={wallet ? () => { setAccountOpen(true); setConfirmDisc(false); setPanelKeyCopied(false); } : onConnectInjected}>
             {wallet ? `${t.connectedAs} ${shortAddr(wallet.address)}` : t.connectWallet}
           </button>
         </div>
@@ -423,6 +489,7 @@ export default function App() {
               const myBuyerCredit = myAddr === c.buyer && c.buyer_credit > 0 && !c.buyer_withdrawn;
               const canCancel = myAddr === c.buyer && c.status === 'FUNDED';
               const open = expanded.has(c.call_id);
+              const callTxs = txsForCall(c);
               return (
                 <li key={c.call_id} className="receipt">
                   <div className="receipt-head">
@@ -439,8 +506,9 @@ export default function App() {
                     <div><span>{t.band}</span><strong>{c.temperature_band || '—'}</strong></div>
                     <div><span>{t.fieldsOk} / {t.fieldsNo}</span><strong>{c.has_required_fields ? t.fieldsOk : t.fieldsNo}</strong></div>
                     {c.status === 'FUNDED' && <div className="alloc-zero"><span>{t.fundedAlloc}</span><strong>{t.amountZero}</strong></div>}
-                    {c.status === 'SETTLED' && <div><span>{t.withdrawProvider}</span><strong>{gen(c.provider_credit)} GEN</strong></div>}
-                    {c.status === 'REFUNDED' && <div><span>{t.withdrawBuyer}</span><strong>{gen(c.buyer_credit)} GEN</strong></div>}
+                    {c.status === 'SETTLED' && <div><span>{t.withdrawProvider}</span><strong>{gen(c.provider_credit)} GEN · {c.provider_withdrawn ? t.withdrawn : t.awaitingWithdraw}</strong></div>}
+                    {c.status === 'REFUNDED' && <div><span>{t.withdrawBuyer}</span><strong>{gen(c.buyer_credit)} GEN · {c.buyer_withdrawn ? t.withdrawn : t.awaitingWithdraw}</strong></div>}
+                    {c.status === 'CANCELLED' && c.buyer_credit > 0 && <div><span>{t.withdrawBuyer}</span><strong>{gen(c.buyer_credit)} GEN · {c.buyer_withdrawn ? t.withdrawn : t.awaitingWithdraw}</strong></div>}
                   </div>
                   {c.verdict && (
                     <div className={`stamp ${verdictClass(c.verdict)}`} aria-label={c.verdict}>{c.verdict}</div>
@@ -464,20 +532,50 @@ export default function App() {
                     )}
                     {(myProviderCredit || myBuyerCredit) && (
                       <button disabled={busy !== ''} onClick={() => void doWrite(`withdraw-c${c.call_id}`, 'withdraw', [c.call_id])}>
-                        {busy === `withdraw-c${c.call_id}` ? t.sending : t.withdrawBtn}
+                        {busy === `withdraw-c${c.call_id}` ? t.sending : myProviderCredit ? `${t.withdrawProviderBtn} · ${gen(c.provider_credit)} GEN` : `${t.withdrawBuyerBtn} · ${gen(c.buyer_credit)} GEN`}
                       </button>
                     )}
                     {!isMine && myAddr && <span className="receipt-note">{t.allCalls}</span>}
                   </div>
                   {open && (
                     <div className="receipt-detail">
-                      <div><span>{t.txHash}</span><span className="mono">{t.unconfirmed}</span></div>
+                      {!readbackOk ? (
+                        <div className="tx-row"><span>{t.txHash}</span><span>—</span></div>
+                      ) : callTxs.length === 0 ? (
+                        <div className="tx-row"><span>{t.txHash}</span><span>—</span></div>
+                      ) : (
+                        callTxs.map((x) => (
+                          <div key={x.hash} className="tx-row">
+                            <span>{txActionLabel(x.action)}</span>
+                            <a className="mono" href={explorerTx(x.hash)} target="_blank" rel="noreferrer">{shortTx(x.hash)}</a>
+                            <span>{x.result}{x.verdict ? ` · ${x.verdict}` : ''}</span>
+                            {x.source === 'browser' && <span className="tx-source">{t.browserRun}</span>}
+                          </div>
+                        ))
+                      )}
                       <p>{t.receipt} #{c.call_id} — {t.readbackOk}: {readbackOk ? fmtReadbackTime(rb!.at) : t.unconfirmed}</p>
-                      {evTxs.filter((x) => x.label === `c${c.call_id}-call` || x.label === `c${c.call_id}-settle`).map((x) => (
-                        <div key={x.label} className="mono">
-                          {x.label} · <a href={explorerTx(x.hash)} target="_blank" rel="noreferrer">{x.hash}</a> · {x.result}{x.verdict ? ` · ${x.verdict}` : ''}
+                      {(myProviderCredit || myBuyerCredit) && (
+                        <div className="withdraw-block">
+                          <button disabled={busy !== ''} onClick={() => void doWrite(`withdraw-c${c.call_id}`, 'withdraw', [c.call_id])}>
+                            {busy === `withdraw-c${c.call_id}` ? t.sending : myProviderCredit ? `${t.withdrawProviderBtn} · ${gen(c.provider_credit)} GEN` : `${t.withdrawBuyerBtn} · ${gen(c.buyer_credit)} GEN`}
+                          </button>
                         </div>
-                      ))}
+                      )}
+                      {!myProviderCredit && !myBuyerCredit && c.provider_credit > 0 && !c.provider_withdrawn && (
+                        <div className="withdraw-note">
+                          <button disabled>{`${t.withdrawProviderBtn} · ${gen(c.provider_credit)} GEN`}</button>
+                          <span>{t.withdrawByProvider} · <span className="mono">{shortAddr(c.provider)}</span></span>
+                        </div>
+                      )}
+                      {!myProviderCredit && !myBuyerCredit && c.buyer_credit > 0 && !c.buyer_withdrawn && (
+                        <div className="withdraw-note">
+                          <button disabled>{`${t.withdrawBuyerBtn} · ${gen(c.buyer_credit)} GEN`}</button>
+                          <span>{t.withdrawByBuyer} · <span className="mono">{shortAddr(c.buyer)}</span></span>
+                        </div>
+                      )}
+                      {(c.provider_withdrawn || c.buyer_withdrawn) && (
+                        <div className="tx-row"><span>{t.withdrawn}</span><strong>{gen(c.provider_withdrawn ? c.provider_credit : c.buyer_credit)} GEN</strong></div>
+                      )}
                     </div>
                   )}
                 </li>
@@ -532,6 +630,7 @@ export default function App() {
             `withdrawn_wei: ${counts?.total_withdrawn_wei ?? 'UNCONFIRMED'}`,
             `balance_wei: ${counts?.contract_balance_wei ?? 'UNCONFIRMED'}`,
             ...evTxs.map((x) => `tx ${x.label}: ${x.hash} ${x.result}`),
+            ...browserTxs.map((x) => `tx ${x.label}: ${x.hash} ${x.result} (browser)`),
           ].join('\n')}</pre>
         </section>
       </main>
@@ -541,6 +640,44 @@ export default function App() {
         <span>{STATIC_MODE ? t.staticNote : ''}</span>
         {dep && <a href={explorerAddress(dep.contract_address)} target="_blank" rel="noreferrer">{dep.contract_address}</a>}
       </footer>
+
+      {accountOpen && wallet && (
+        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label={t.accountTitle}>
+          <div className="modal">
+            <h3>{t.accountTitle}</h3>
+            <div className="receipt-lines">
+              <div><span>{t.accountAddress}</span><span className="mono">{wallet.address}</span></div>
+              <div><span>{t.accountMode}</span><strong>{wallet.mode === 'temporary' ? t.modeTemp : `${t.modeInjected} · ${walletKind()}`}</strong></div>
+            </div>
+            {wallet.mode === 'temporary' && <p>{t.tempRisk}</p>}
+            {!confirmDisc ? (
+              <div className="modal-actions">
+                <button onClick={() => setConfirmDisc(true)}>{t.disconnect}</button>
+                <button onClick={() => setAccountOpen(false)}>{t.close}</button>
+              </div>
+            ) : (
+              <>
+                <p>{wallet.mode === 'temporary' ? t.disconnectBodyTemp : t.disconnectBody}</p>
+                {wallet.mode === 'temporary' && (
+                  <>
+                    <label>{t.yourKey}</label>
+                    <p className="mono key-box">{tempPrivateKey() || '—'}</p>
+                    <div className="modal-actions">
+                      <button onClick={() => { try { navigator.clipboard?.writeText(tempPrivateKey() || ''); setPanelKeyCopied(true); } catch { /* ignore */ } }}>
+                        {panelKeyCopied ? t.copied : t.copyKey}
+                      </button>
+                    </div>
+                  </>
+                )}
+                <div className="modal-actions">
+                  <button onClick={() => { onDisconnect(); setAccountOpen(false); setConfirmDisc(false); }}>{t.confirmDisconnect}</button>
+                  <button onClick={() => setConfirmDisc(false)}>{t.cancel}</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {keyModal && (
         <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label={t.saveKeyTitle}>
