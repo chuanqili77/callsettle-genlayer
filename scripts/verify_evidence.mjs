@@ -51,6 +51,8 @@ const EXPECTED_ERROR = {
   'neg4-list-price-eleven': 'PRICE',
   'neg5-stranger-withdraw': 'NO_CREDIT',
   'neg6-double-withdraw': 'NO_CREDIT',
+  'neg7-list-non-openmeteo-url': 'URL_HOST',
+  'neg8-call-wrong-value': 'VALUE_MUST_EQUAL_PRICE',
 };
 const EXPECTED_VERDICT = {
   'c1-settle': 'RESPONSE_VALID',
@@ -117,10 +119,10 @@ ok('E3 readback: 0 settled_valid, 0 violations', e3.settled_valid === 0 && e3.vi
 const counts = await read('get_counts', []);
 ok('counts: 3 endpoints, 5 calls, 1 violation',
   counts.endpoint_count === 3 && counts.call_count === 5 && counts.total_violations === 1, JSON.stringify(counts));
-ok('ledger: 13 GEN in = 13 out, escrow 0, violations 1; balance 3 GEN stranded by the failed payable neg2 (platform behavior, disclosed)',
+ok('ledger: 13 GEN in = 13 out, escrow 0, violations 1; contract balance 0 GEN (zero stranded value — every failed-payable negative sent 0 GEN)',
   counts.total_received_wei === 13000000000000000000 && counts.total_withdrawn_wei === 13000000000000000000
-  && counts.contract_balance_wei === 3000000000000000000 && counts.escrowed_wei === 0, JSON.stringify(counts));
-ok('protocol is callsettle-1', (await reader.readContract({address: ADDRESS, functionName: 'get_protocol', args: [], transactionHashVariant: 'latest-final'})) === 'callsettle-1');
+  && counts.contract_balance_wei === 0 && counts.escrowed_wei === 0, JSON.stringify(counts));
+ok('protocol is callsettle-1.1', (await reader.readContract({address: ADDRESS, functionName: 'get_protocol', args: [], transactionHashVariant: 'latest-final'})) === 'callsettle-1.1');
 
 console.log(`\nverify: ${pass} PASS, ${fail} FAIL, ${txs.transactions.length} txs checked`);
 if (fail > 0) { console.log('failures:', failures.join(', ')); process.exit(1); }

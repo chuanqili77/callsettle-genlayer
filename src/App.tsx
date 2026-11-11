@@ -355,7 +355,7 @@ export default function App() {
               <textarea value={listNote} onChange={(ev) => setListNote(ev.target.value)} placeholder={t.notePh} rows={3} />
             </label>
             <button
-              disabled={!wallet || busy !== '' || !listUrl.startsWith('https://')}
+              disabled={!wallet || busy !== '' || !listUrl.startsWith('https://api.open-meteo.com/v1/forecast')}
               onClick={() => {
                 const price = Number(listPrice);
                 if (!Number.isInteger(price) || price < MIN_PRICE_GEN || price > MAX_PRICE_GEN) {

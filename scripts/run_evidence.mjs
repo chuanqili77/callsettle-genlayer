@@ -1,7 +1,7 @@
 // CallSettle: full evidence run on Stable Studionet (61999).
 // Pre-registered expectations: EXPECTED.md (written before this run).
 // 3 endpoint listings + 5 calls + 4 settlements + 1 cancel +
-// 5 withdrawals + 7 on-chain negatives = 25 txs + 1 deploy = 26.
+// 5 withdrawals + 9 on-chain negatives = 27 txs + 1 deploy = 28.
 // Resumable via the checkpoint file. Temp accounts live ONLY in the
 // checkpoint file (workspace, NOT in the repo, mode 0600).
 // Negative checks compare the exact leader-receipt error payload
@@ -91,6 +91,8 @@ const NEG_ERRORS = {
   'neg4-list-price-eleven': 'PRICE',
   'neg5-stranger-withdraw': 'NO_CREDIT',
   'neg6-double-withdraw': 'NO_CREDIT',
+  'neg7-list-non-openmeteo-url': 'URL_HOST',
+  'neg8-call-wrong-value': 'VALUE_MUST_EQUAL_PRICE',
 };
 const SETTLE_INFO = {
   'c1-settle': {verdict: 'RESPONSE_VALID', caller: 'OUT'},
@@ -104,12 +106,12 @@ const LABEL_ORDER = ['e1-list-good', 'e2-list-bad', 'e3-list-unreachable',
   'neg5-stranger-withdraw', 'c1-provider-withdraw', 'c2-provider-withdraw',
   'c3-buyer-withdraw', 'c4-buyer-withdraw', 'c5-buyer-withdraw',
   'neg6-double-withdraw', 'neg1-double-settle', 'neg2-call-unknown-endpoint',
-  'neg3-list-price-zero', 'neg4-list-price-eleven'];
+  'neg3-list-price-zero', 'neg4-list-price-eleven',
+  'neg7-list-non-openmeteo-url', 'neg8-call-wrong-value'];
 for (const label of LABEL_ORDER) {
   const hash = done[label];
   if (!hash) continue;
-  if (label.startsWith('neg')) records.push({label, hash, result: 'error-observed', expected_error: NEG_ERRORS[label],
-    ...(label === 'neg2-call-unknown-endpoint' ? {stranded_wei: 3000000000000000000, stranded_note: 'FAILED_PAYABLE_KEEPS_VALUE: the failed payable call stranded exactly the sent value in the contract balance (platform behavior, disclosed in EVIDENCE.md).'} : {})});
+  if (label.startsWith('neg')) records.push({label, hash, result: 'error-observed', expected_error: NEG_ERRORS[label]});
   else if (/-attempt-\d+$/.test(label)) records.push({label, hash, result: 'disagreed-retry'});
   else if (SETTLE_INFO[label]) records.push({label, hash, result: 'ok', ...SETTLE_INFO[label]});
   else records.push({label, hash, result: 'ok'});
@@ -204,24 +206,11 @@ async function writeErr(label, who, fn, args, code, value = 0n) {
   const afterCounts = await readCounts();
   const extra = {expected_error: code, unchanged_state: true};
   if (beforeCalls !== afterCalls || beforeEndpoints !== afterEndpoints || JSON.stringify(beforeCounts) !== JSON.stringify(afterCounts)) {
-    // One documented exception: a FAILED payable call keeps its value
-    // (platform behavior, also seen on LinguaCourt: the ghost contract
-    // receives the value even when consensus errors). The only allowed
-    // difference is contract_balance_wei rising by exactly the sent
-    // value; every other field must be identical.
-    const onlyBalance = beforeCalls === afterCalls && beforeEndpoints === afterEndpoints
-      && afterCounts.endpoint_count === beforeCounts.endpoint_count
-      && afterCounts.call_count === beforeCounts.call_count
-      && afterCounts.total_violations === beforeCounts.total_violations
-      && afterCounts.total_received_wei === beforeCounts.total_received_wei
-      && afterCounts.total_withdrawn_wei === beforeCounts.total_withdrawn_wei
-      && afterCounts.escrowed_wei === beforeCounts.escrowed_wei
-      && afterCounts.contract_balance_wei - beforeCounts.contract_balance_wei === Number(value);
-    if (!onlyBalance) throw new Error(label + ' changed state');
-    extra.unchanged_state = false;
-    extra.stranded_wei = Number(value);
-    extra.stranded_note = 'FAILED_PAYABLE_KEEPS_VALUE: the failed payable call stranded exactly the sent value in the contract balance (platform behavior, disclosed in EVIDENCE.md).';
-    console.log(label, 'state change is ONLY the stranded failed-payable value:', Number(value), 'wei');
+    // v1.1: every failed-payable negative sends 0 GEN, so NO state
+    // change of any kind is allowed. (v1.0 had one documented
+    // exception: a failed payable kept its value. That exception is
+    // gone by design — no negative in this run carries value.)
+    throw new Error(label + ' changed state');
   }
   record(label, hash, 'error-observed', extra);
   return hash;
@@ -253,11 +242,12 @@ async function settleFlow(label, callId, expectedVerdict, caller = 'OUT') {
 }
 
 const GOOD_URL = 'https://api.open-meteo.com/v1/forecast?latitude=52.52&longitude=13.41&current=temperature_2m,wind_speed_10m&timezone=Europe%2FBerlin';
-const BAD_URL = 'https://httpbin.org/json';
-const DEAD_URL = 'https://nonexistent-callsettle-xyz.invalid/';
-const GOOD_NOTE = 'HTTP 200, JSON, current.temperature_2m is a number in -60..60, current.time is a string. Berlin current weather, no key.';
-const BAD_NOTE = 'Same agreed schema as the good endpoint. This endpoint returns HTTP 200 JSON without a current field, so it must settle RESPONSE_INVALID.';
-const DEAD_NOTE = 'Same agreed schema as the good endpoint. This host does not exist, so it must settle UNREACHABLE.';
+const BAD_URL = 'https://api.open-meteo.com/v1/forecast?latitude=52.52&longitude=13.41&timezone=Europe%2FBerlin';
+const DEAD_URL = 'https://api.open-meteo.com/v1/forecast?latitude=999&longitude=999';
+const NON_OPENMETEO_URL = 'https://httpbin.org/json';
+const GOOD_NOTE = 'Single public mode: HTTP 200, JSON, current.temperature_2m is a number in -60..60, current.time is a string. Berlin current weather, no key.';
+const BAD_NOTE = 'Single public mode (same as the good endpoint). This forecast URL returns HTTP 200 JSON without a current field, so it must settle RESPONSE_INVALID.';
+const DEAD_NOTE = 'Single public mode (same as the good endpoint). This forecast URL returns HTTP 400 (latitude out of range), so it must settle UNREACHABLE.';
 
 async function listEndpoint(key, who, url, price, note) {
   const label = key.toLowerCase() + '-list-' + (key === 'E1' ? 'good' : key === 'E2' ? 'bad' : 'unreachable');
@@ -311,12 +301,15 @@ await writeOk('c3-buyer-withdraw', 'B1', 'withdraw', [cids.C3]);
 await writeOk('c4-buyer-withdraw', 'B2', 'withdraw', [cids.C4]);
 await writeOk('c5-buyer-withdraw', 'B1', 'withdraw', [cids.C5]);
 
-// Remaining negatives.
+// Remaining negatives. neg2 and neg8 are failed payables sent with
+// 0 GEN: the exact error is proved with no value stranded.
 await writeErr('neg6-double-withdraw', 'P1', 'withdraw', [cids.C1], 'NO_CREDIT');
 await writeErr('neg1-double-settle', 'OUT', 'settle_call', [cids.C1], 'CALL_NOT_FUNDED');
-await writeErr('neg2-call-unknown-endpoint', 'B1', 'call_api', [99], 'ENDPOINT_NOT_FOUND', 3n * GEN);
+await writeErr('neg2-call-unknown-endpoint', 'B1', 'call_api', [99], 'ENDPOINT_NOT_FOUND', 0n);
 await writeErr('neg3-list-price-zero', 'P1', 'list_endpoint', [GOOD_URL, 0, GOOD_NOTE], 'PRICE');
 await writeErr('neg4-list-price-eleven', 'P1', 'list_endpoint', [GOOD_URL, 11, GOOD_NOTE], 'PRICE');
+await writeErr('neg7-list-non-openmeteo-url', 'P1', 'list_endpoint', [NON_OPENMETEO_URL, 2, GOOD_NOTE], 'URL_HOST');
+await writeErr('neg8-call-wrong-value', 'B1', 'call_api', [ids.E1], 'VALUE_MUST_EQUAL_PRICE', 0n);
 
 // Final readback vs EXPECTED.md.
 const expectCalls = {
@@ -347,15 +340,14 @@ if (e2.violations !== 1 || e2.settled_valid !== 0) throw new Error('E2 violation
 const counts = await readCounts();
 console.log('counts:', JSON.stringify(counts));
 // Ledger: 13 GEN received and 13 GEN withdrawn through the contract's
-// own accounting (escrowed 0). Contract balance is 3 GEN, not 0: the
-// failed payable neg2 (call to a nonexistent endpoint) kept its 3 GEN
-// value in the contract — platform behavior, disclosed in EVIDENCE.md
-// and in the EXPECTED.md addendum. No other value is unaccounted for.
-if (counts.total_received_wei !== 13000000000000000000 || counts.total_withdrawn_wei !== 13000000000000000000 || counts.contract_balance_wei !== 3000000000000000000 || counts.escrowed_wei !== 0 || counts.total_violations !== 1) {
-  throw new Error('LEDGER MISMATCH: expected 13 GEN in = 13 out, balance 3 (stranded failed-payable value), escrow 0, violations 1');
+// own accounting (escrowed 0). Contract balance is 0 GEN: no value was
+// stranded — every failed-payable negative in v1.1 sent 0 GEN by design
+// (see EXPECTED.md, "Honest note on failed payables").
+if (counts.total_received_wei !== 13000000000000000000 || counts.total_withdrawn_wei !== 13000000000000000000 || counts.contract_balance_wei !== 0 || counts.escrowed_wei !== 0 || counts.total_violations !== 1) {
+  throw new Error('LEDGER MISMATCH: expected 13 GEN in = 13 out, balance 0, escrow 0, violations 1');
 }
 
 fs.mkdirSync(path.dirname(TX_PATH), {recursive: true});
 fs.writeFileSync(TX_PATH, JSON.stringify({network: 'Stable Studionet', chain_id: CHAIN_ID, contract_address: ADDRESS, deploy_tx: cp.deploy_tx, complete: true, transactions: records}, null, 2));
 console.log('evidence complete:', records.length, 'txs recorded in', TX_PATH);
-console.log('ALL EXPECTED OUTCOMES MATCH. 13 GEN in = 13 out, balance 3 (3 GEN stranded by the failed payable neg2 — platform behavior, disclosed), escrow 0, violations 1.');
+console.log('ALL EXPECTED OUTCOMES MATCH. 13 GEN in = 13 out, balance 0 (zero stranded value), escrow 0, violations 1.');

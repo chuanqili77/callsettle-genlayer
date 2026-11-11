@@ -2,18 +2,18 @@
   "network": "Stable Studionet",
   "chain_id": 61999,
   "rpc": "https://studio.genlayer.com/api",
-  "contract_address": "0x445Fcd2bBCEbF42C7EE3946644ADdb64698E66E2",
-  "deploy_tx": "0x78b128620a88b2e4e65a7bcf43057b72f8b66f7d656f1af7a1fda969956ad24c",
-  "explorer": "https://explorer-studio.genlayer.com/address/0x445Fcd2bBCEbF42C7EE3946644ADdb64698E66E2",
-  "source_sha256": "31d4db85b85680d08d8a697642fd5579d633f88c911c940c25e940a5f2fd551b",
-  "source_bytes": 15989,
+  "contract_address": "0x58c71cDA976912e9F16438317dE7804523EFaEe6",
+  "deploy_tx": "0xeb68bda674c14e2e555cd92d372220d72b43448bcef404a17fd110da1cecf4a1",
+  "explorer": "https://explorer-studio.genlayer.com/address/0x58c71cDA976912e9F16438317dE7804523EFaEe6",
+  "source_sha256": "abc7fe77b13a64f705b27817b5ea9df8cc1bcd86e4c81acb5e23b3bd274f4908",
+  "source_bytes": 16755,
   "source_file": "contracts/callsettle.py",
   "byte_parity": "BYTE_PARITY_MATCH: TRUE",
   "wallets": {
-    "P1": "0x509d30c3dcecb3e7e6be3848c49385df8a5c84a6",
-    "B1": "0x19f5bbc57654916d5b24ff6886a6a46317ac93a1",
-    "B2": "0x7c5b0813924efa46fcdd41922574d31ba7924a7e",
-    "OUT": "0x83409fa5fc848a30f59594c7b5a5220edef2ff5b"
+    "P1": "0x1535afc1f57f5bc886b98725de455df24a266238",
+    "B1": "0xe6016ed17798cd9fa6fef2975087663b21e135f3",
+    "B2": "0x1fb8eb7fe7810a3a6c20afea351960288787ac19",
+    "OUT": "0xa63bb3602ec735e48e459b30569d060a89f5b7ef"
   },
   "note": "Temp accounts generated for this evidence run only."
 }

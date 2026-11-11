@@ -1,15 +1,20 @@
 # { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
 """CallSettle: pay-per-call settlement for public APIs on GenLayer Studionet.
 
-Protocol callsettle-1. A provider lists a public, keyless API endpoint
-with a per-call price (1-10 GEN). A buyer pays for one call: the exact
+Protocol callsettle-1.1. v1 is a single-mode market: every listed
+endpoint is an Open-Meteo weather endpoint (list_endpoint rejects
+any URL that does not start with
+'https://api.open-meteo.com/v1/forecast'); providers compete on
+per-call price (1-10 GEN). A buyer pays for one call: the exact
 price is escrowed. Anyone may then trigger settlement: GenLayer
-validators each independently fetch the endpoint URL and check the live
-response against the response schema agreed on-chain at listing time
-(HTTP 200, JSON, current.temperature_2m a number in -60..60,
-current.time a string). They must agree exactly on verdict +
-temperature_band + has_required_fields, or the call stays FUNDED and
-settlement can be retried (fail-closed).
+validators each independently fetch the endpoint URL and check the
+live response against the one public mode (HTTP 200, JSON,
+current.temperature_2m a number in -60..60, current.time a string).
+They must agree exactly on verdict + temperature_band +
+has_required_fields, or the call stays FUNDED and settlement can be
+retried (fail-closed). The schema_note stored at listing is a
+human-readable description of this single mode, not a per-endpoint
+settlement rule: it is never fed into consensus.
 
 Verdicts (deterministic code, no LLM anywhere in this contract):
   RESPONSE_VALID   -> escrow pays the provider, no violation
@@ -17,7 +22,12 @@ Verdicts (deterministic code, no LLM anywhere in this contract):
   UNREACHABLE      -> escrow refunds the buyer, no violation
 Settlement never moves money directly: it records a pull-payment
 credit; the entitled party withdraws it with withdraw(). A failed
-payable call takes no money; a disagreed settlement changes nothing.
+payable call KEEPS its value in the contract (platform behavior on
+Studionet: a failed payable is not refunded, as also observed on
+LinguaCourt). The frontend only ever submits the exact price to an
+existing ACTIVE endpoint, so that path is unreachable from the UI,
+and the v1.1 evidence run sends 0 GEN on its failed-payable
+negatives, so no value is stranded there.
 
 Temperature is a decision-free diagnostic only: it is stored as a
 10-degree band (LT0 / 0_10 / 10_20 / 20_30 / GT30), never as a float,
@@ -41,9 +51,10 @@ caller. No time gates anywhere (Studionet has no clock): every
 transition is an explicit action.
 
 Known limits (neutral, product-scope):
-  * Public, keyless endpoints only; an endpoint that needs an API key
-    cannot be listed meaningfully, because validators fetch without
-    credentials.
+  * Single-mode market in v1.1: only Open-Meteo forecast endpoints
+    can be listed (URL prefix enforced in list_endpoint). An endpoint
+    that needs an API key cannot be listed meaningfully, because
+    validators fetch without credentials.
   * An endpoint has no delist action in v1: a listed endpoint stays
     ACTIVE. A provider that wants to stop selling simply stops being
     called; no funds are at risk from a stale listing because every
@@ -251,6 +262,8 @@ class CallSettle(gl.Contract):
         url = url.strip()
         if not url.startswith('https://'):
             fail('URL_HTTPS')
+        if not url.startswith('https://api.open-meteo.com/v1/forecast'):
+            fail('URL_HOST')
         if not isinstance(price_gen, int) or isinstance(price_gen, bool) \
                 or not MIN_PRICE_GEN <= price_gen <= MAX_PRICE_GEN:
             fail('PRICE')
@@ -375,7 +388,7 @@ class CallSettle(gl.Contract):
 
     @gl.public.view
     def get_protocol(self) -> str:
-        return 'callsettle-1'
+        return 'callsettle-1.1'
 
     @gl.public.view
     def get_limits(self) -> str:

@@ -42,6 +42,15 @@ def check_body(text):
     return True, 'RESPONSE_VALID', band(temp)
 
 
+GOOD_URL = 'https://api.open-meteo.com/v1/forecast?latitude=52.52&longitude=13.41&current=temperature_2m,wind_speed_10m&timezone=Europe%2FBerlin'
+BAD_MODE_URL = 'https://api.open-meteo.com/v1/forecast?latitude=52.52&longitude=13.41&timezone=Europe%2FBerlin'
+DEAD_URL = 'https://api.open-meteo.com/v1/forecast?latitude=999&longitude=999'
+
+
+def url_allowed(url):
+    return isinstance(url, str) and url.startswith('https://api.open-meteo.com/v1/forecast')
+
+
 GOOD = json.dumps({"current": {"time": "2026-11-11T23:30",
                                "temperature_2m": 4.0,
                                "wind_speed_10m": 2.5}})
@@ -66,6 +75,17 @@ def check(name, cond):
     if not cond:
         failures.append(name)
 
+
+# URL prefix gate (v1.1): only Open-Meteo forecast endpoints list
+check('good Open-Meteo forecast URL allowed', url_allowed(GOOD_URL))
+check('Open-Meteo forecast URL without current param allowed (mode still checked at settle)',
+      url_allowed(BAD_MODE_URL))
+check('Open-Meteo forecast URL with out-of-range latitude allowed at listing (settle sees HTTP 400 -> UNREACHABLE)',
+      url_allowed(DEAD_URL))
+check('Open-Meteo bad path URL rejected at listing (not /v1/forecast)', not url_allowed('https://api.open-meteo.com/v1/nope?latitude=52.52&longitude=13.41'))
+check('httpbin URL rejected by URL_HOST gate', not url_allowed('https://httpbin.org/json'))
+check('non-Open-Meteo host rejected', not url_allowed('https://example.com/v1/forecast'))
+check('http (not https) rejected', not url_allowed('http://api.open-meteo.com/v1/forecast'))
 
 # Schema checks
 check('good body -> VALID, band 0_10, fields true',

@@ -32,7 +32,7 @@ const rows = txs.transactions.map((r) => {
   return `| ${r.label} | ${txLink(r.hash)} | ${r.result}${extra}${err} |`;
 }).join('\n');
 
-const evidence = `# EVIDENCE.md — CallSettle (protocol callsettle-1)
+const evidence = `# EVIDENCE.md — CallSettle (protocol callsettle-1.1)
 
 - Network: Stable Studionet, Chain ID 61999
 - Contract: [${ADDRESS}](${addrLink})
@@ -59,11 +59,11 @@ ${JSON.stringify({calls, endpoints, counts}, null, 2)}
 - GEN in through the contract's accounting: 13 (calls C1–C5: 3 + 3 + 2 + 2 + 3)
 - GEN out through the contract's accounting: 13 (provider 6 + buyers 7)
 - Escrow: 0 GEN, total violations: 1 (endpoint E2 only)
-- Contract balance: 3 GEN — stranded by the FAILED payable neg2 (call
-  to a nonexistent endpoint, 3 GEN sent). Platform behavior: a failed
-  payable call keeps its value in the contract (also observed on
-  LinguaCourt, where a failed payable stranded 21 GEN). The 3 GEN has
-  no withdraw path and is disclosed here, not hidden. Testnet GEN only,
+- Contract balance: 0 GEN. No value stranded: every failed-payable
+  negative in v1.1 sent 0 GEN by design. (Platform behavior, stated
+  honestly in the contract docstring: a failed payable call keeps its
+  value in the contract on Studionet — v1.0 stranded 3 GEN that way,
+  which is why v1.1 negatives carry no value.) Testnet GEN only,
   zero cash cost.
 
 ## Transactions
@@ -78,12 +78,14 @@ ${rows}
 |------|----------|--------|
 | Stranger cancels another buyer's FUNDED call (neg0) | ONLY_BUYER_CAN_CANCEL, state unchanged | error-observed, see table |
 | Double-settle an already SETTLED call (neg1) | CALL_NOT_FUNDED, state unchanged | error-observed, see table |
-| Call a nonexistent endpoint (neg2) | ENDPOINT_NOT_FOUND | error-observed, see table |
+| Call a nonexistent endpoint, 0 GEN sent (neg2) | ENDPOINT_NOT_FOUND, no value stranded | error-observed, see table |
 | List an endpoint at price 0 / 11 GEN (neg3/neg4) | PRICE | error-observed, see table |
 | Stranger withdraws another party's credit (neg5) | NO_CREDIT, state unchanged | error-observed, see table |
 | Double-withdraw an already withdrawn credit (neg6) | NO_CREDIT, state unchanged | error-observed, see table |
-| Bad-schema endpoint (E2, httpbin.org/json) | RESPONSE_INVALID, buyer refunded, violations +1 | settled INVALID, see C3 |
-| Unreachable endpoint (E3, unresolvable host) | UNREACHABLE, buyer refunded, no violation | settled UNREACHABLE, see C4 |
+| List a non-Open-Meteo URL (neg7) | URL_HOST, state unchanged | error-observed, see table |
+| Call an existing endpoint with 0 GEN instead of the exact price (neg8) | VALUE_MUST_EQUAL_PRICE, no value stranded | error-observed, see table |
+| Bad-mode endpoint (E2, Open-Meteo forecast without a current field) | RESPONSE_INVALID, buyer refunded, violations +1 | settled INVALID, see C3 |
+| Unreachable endpoint (E3, Open-Meteo forecast with latitude 999, HTTP 400) | UNREACHABLE, buyer refunded, no violation | settled UNREACHABLE, see C4 |
 | Injection text inside a response body | Verdict follows the JSON schema only; instruction text cannot flip it | Mock test in tests/test_callsettle_mock.py (deterministic check, no LLM in the path) |
 `;
 
@@ -93,23 +95,25 @@ const reviewer = `# REVIEWER.md — CallSettle
 
 Every API call settles against its live response: validators
 independently fetch the provider's public endpoint and judge it
-against the schema agreed on-chain at listing, and the money follows
-the verdict (VALID pays the provider, INVALID refunds the buyer and
-records a violation, UNREACHABLE refunds the buyer without a
-violation).
+against the single public mode (Open-Meteo weather response:
+HTTP 200, JSON, current.temperature_2m a number in -60..60,
+current.time a string), and the money follows the verdict (VALID pays
+the provider, INVALID refunds the buyer and records a violation,
+UNREACHABLE refunds the buyer without a violation).
 
 ## Anchor
 
 The provider's public endpoint response itself — outside the
 beneficiary's control, fetched independently by each validator at
 settlement. Demo endpoints: Open-Meteo public weather API (valid),
-\`https://httpbin.org/json\` (HTTP 200, no \`current\` field — invalid),
-an unresolvable host (unreachable).
+an Open-Meteo forecast URL without a \`current\` field (invalid),
+an Open-Meteo forecast URL with latitude 999, which returns HTTP 400
+(unreachable).
 
 ## Contract
 
 - Address: [${ADDRESS}](${addrLink})
-- Protocol: callsettle-1
+- Protocol: callsettle-1.1
 - Source SHA-256: \`${deployment.source_sha256}\`
 - Deploy tx: [${deployment.deploy_tx}](${EX}/tx/${deployment.deploy_tx})
 - Byte parity: \`node scripts/byte_parity.mjs\` (deployed code ==
@@ -133,18 +137,19 @@ ${rows}
 
 ## Adversarial cases
 
-See EVIDENCE.md — 7 on-chain negatives (stranger cancel, double
-settle, unknown endpoint, price 0/11, stranger withdraw, double
-withdraw) plus the bad-schema and unreachable settlements. All
-FINALIZED with the exact expected error payloads; state unchanged
-after each negative.
+See EVIDENCE.md — 9 on-chain negatives (stranger cancel, double
+settle, unknown endpoint at 0 GEN, price 0/11, stranger withdraw,
+double withdraw, non-Open-Meteo URL, wrong-value call) plus the
+bad-mode and unreachable settlements. All FINALIZED with the exact
+expected error payloads; state unchanged after each negative.
 
 ## What this project does not prove
 
 It does not prove an endpoint is business-correct (only that its
-response matches the agreed schema); it does not prove keyed endpoints
-work; it does not prove temperature readings are accurate (temperature
-is stored only as a 10 °C band and never decides anything).
+response matches the single public mode); it does not prove keyed
+endpoints work; it does not prove temperature readings are accurate
+(temperature is stored only as a 10 °C band and never decides
+anything).
 `;
 
 fs.writeFileSync(path.join(REPO, 'EVIDENCE.md'), evidence);
