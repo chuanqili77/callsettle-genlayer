@@ -67,6 +67,24 @@ Final ledger (exact):
 - E1: settled_valid 2, violations 0. E2: settled_valid 0, violations 1. E3: settled_valid 0, violations 0.
 - has_required_fields is true exactly for VALID calls (C1, C2); false for C3, C4, C5.
 
+## Browser write-loop C6 (pre-registered before the browser run, 2026-11-12)
+
+After the scripted evidence run, one more call is made through the
+live site in a real browser, with the site's own in-browser temporary
+test account (never presented as a wallet signature). The buyer
+address is not known in advance — it is the temp account the browser
+creates, and is recorded afterwards with the transaction hashes.
+
+| ID | Buyer | Endpoint | Price | Expected settlement |
+|----|-------|----------|-------|---------------------|
+| C6 | browser temp account (recorded after) | E1 | 3 GEN | RESPONSE_VALID, status SETTLED, provider_credit 3 GEN, buyer_credit 0. Settled from the site. Provider (P1) then withdraws 3 GEN from the site. |
+
+Ledger after C6 (exact):
+- GEN in: 13 + 3 = 16 GEN
+- GEN out: provider 6 + 3 = 9 GEN; buyer 7 GEN; total 16 GEN
+- Contract balance 0 GEN, escrow 0, total violations 1 (E2 only)
+- E1: settled_valid 3, violations 0. Call count 6.
+
 ## Honest note on failed payables (v1.1)
 
 The v1.1 contract docstring states the truth: a failed payable call

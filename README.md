@@ -39,7 +39,7 @@ Verdicts (deterministic code, no LLM anywhere):
 |---------|---------|-------|-----------------|
 | `RESPONSE_VALID` | Response matches the single public mode | Escrow pays the provider | — |
 | `RESPONSE_INVALID` | Response does not match the mode | Full refund to the buyer | Violations +1 |
-| `UNREACHABLE` | Endpoint cannot be fetched | Full refund to the buyer | No violation |
+| `UNREACHABLE` | Endpoint cannot be fetched, or returns a non-200 response | Full refund to the buyer | No violation |
 
 Temperature is a diagnostic only: it is stored as a 10 °C band
 (`LT0 / 0_10 / 10_20 / 20_30 / GT30`), never as a float, never as a
