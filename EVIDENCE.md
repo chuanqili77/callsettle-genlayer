@@ -1,28 +1,28 @@
-# EVIDENCE.md — CallSettle (protocol callsettle-1.2)
+# EVIDENCE.md — CallSettle (protocol callsettle-1.3)
 
 - Network: Stable Studionet, Chain ID 61999
-- Contract: [0x0ae3DeB61fA3f84FA15EA164a9B0F2E59469e265](https://explorer-studio.genlayer.com/address/0x0ae3DeB61fA3f84FA15EA164a9B0F2E59469e265)
-- Deploy tx: [0xcbed0469e2410972a5529febe9ba9088c82c5aa54081e9998f0f2cccf60323eb](https://explorer-studio.genlayer.com/tx/0xcbed0469e2410972a5529febe9ba9088c82c5aa54081e9998f0f2cccf60323eb)
-- Source: `contracts/callsettle.py` (17175 bytes)
-- Source SHA-256: `3271ff330e97b64a3a2977f630beceb6cf00a70975834ea08aa90a4405973fd2`
+- Contract: [0xe0c8716f8f1D8C64c8bd3F1eD7d063AFa2bC2A9E](https://explorer-studio.genlayer.com/address/0xe0c8716f8f1D8C64c8bd3F1eD7d063AFa2bC2A9E)
+- Deploy tx: [0xd99bcf5080aecb86f83ed295bed71ae2a3df2308ecb68f4d23d655bd9f2b40d9](https://explorer-studio.genlayer.com/tx/0xd99bcf5080aecb86f83ed295bed71ae2a3df2308ecb68f4d23d655bd9f2b40d9)
+- Source: `contracts/callsettle.py` (22627 bytes)
+- Source SHA-256: `90c67e3e6c48a65cf5c0c665ab80e4bcd8aa5ea8a00cac99fe0dcadbc3c2fe97`
 - Byte parity: deployed code is byte-for-byte identical to the repo source
   (`node scripts/byte_parity.mjs`).
 - Evidence run: 31 transactions recorded
   (21 ok, 10 error-observed, 0 disagreed-retry),
-  all FINALIZED. Browser write loop: 4 transactions
+  all FINALIZED. Browser write loop: 0 transactions
   recorded in `docs/browser-transactions.json`. Independent verification:
   `node scripts/verify_evidence.mjs` re-reads every transaction live
   and re-checks the readback below.
 - Expectations were pre-registered in EXPECTED.md before the run; every
   outcome below matched.
 
-## Final readback (latest-final, generated from live state at 2026-11-12T07:42:34.555Z)
+## Final readback (latest-final, generated from live state at 2026-11-12T15:13:44.464Z)
 
 ```json
 {
   "calls": [
     {
-      "buyer": "0x11257bc090b9a86488979666b67639fab1a7cd6d",
+      "buyer": "0x9521a2c7a70ea9fe85d218ac6155f7d4978d7b5a",
       "buyer_credit": 0,
       "buyer_withdrawn": false,
       "call_id": 1,
@@ -30,15 +30,20 @@
       "has_required_fields": true,
       "price_gen": 3,
       "price_wei": 3000000000000000000,
-      "provider": "0x39cca217905e3c4f8164d407026d0b992d33d312",
+      "provider": "0x79a9926a458cf93a1e8002a58f7a1d5d35a68b36",
       "provider_credit": 3000000000000000000,
       "provider_withdrawn": true,
+      "snapshot": {
+        "temperature_2m": 6.1,
+        "time": "2026-11-12T15:45",
+        "wind_speed_10m": 9.4
+      },
       "status": "SETTLED",
       "temperature_band": "0_10",
       "verdict": "RESPONSE_VALID"
     },
     {
-      "buyer": "0x857f9b05e5d97f314bc22baed6041e8b1ec4286c",
+      "buyer": "0x22311d991e74d9f0788c4e9e363cae98b611a5cf",
       "buyer_credit": 0,
       "buyer_withdrawn": false,
       "call_id": 2,
@@ -46,15 +51,20 @@
       "has_required_fields": true,
       "price_gen": 3,
       "price_wei": 3000000000000000000,
-      "provider": "0x39cca217905e3c4f8164d407026d0b992d33d312",
+      "provider": "0x79a9926a458cf93a1e8002a58f7a1d5d35a68b36",
       "provider_credit": 3000000000000000000,
       "provider_withdrawn": true,
+      "snapshot": {
+        "temperature_2m": 6.1,
+        "time": "2026-11-12T15:45",
+        "wind_speed_10m": 9.4
+      },
       "status": "SETTLED",
       "temperature_band": "0_10",
       "verdict": "RESPONSE_VALID"
     },
     {
-      "buyer": "0x11257bc090b9a86488979666b67639fab1a7cd6d",
+      "buyer": "0x9521a2c7a70ea9fe85d218ac6155f7d4978d7b5a",
       "buyer_credit": 2000000000000000000,
       "buyer_withdrawn": true,
       "call_id": 3,
@@ -62,15 +72,16 @@
       "has_required_fields": false,
       "price_gen": 2,
       "price_wei": 2000000000000000000,
-      "provider": "0x39cca217905e3c4f8164d407026d0b992d33d312",
+      "provider": "0x79a9926a458cf93a1e8002a58f7a1d5d35a68b36",
       "provider_credit": 0,
       "provider_withdrawn": false,
+      "snapshot": null,
       "status": "REFUNDED",
       "temperature_band": "NONE",
       "verdict": "RESPONSE_INVALID"
     },
     {
-      "buyer": "0x857f9b05e5d97f314bc22baed6041e8b1ec4286c",
+      "buyer": "0x22311d991e74d9f0788c4e9e363cae98b611a5cf",
       "buyer_credit": 2000000000000000000,
       "buyer_withdrawn": true,
       "call_id": 4,
@@ -78,15 +89,16 @@
       "has_required_fields": false,
       "price_gen": 2,
       "price_wei": 2000000000000000000,
-      "provider": "0x39cca217905e3c4f8164d407026d0b992d33d312",
+      "provider": "0x79a9926a458cf93a1e8002a58f7a1d5d35a68b36",
       "provider_credit": 0,
       "provider_withdrawn": false,
+      "snapshot": null,
       "status": "REFUNDED",
       "temperature_band": "NONE",
       "verdict": "UNREACHABLE"
     },
     {
-      "buyer": "0x11257bc090b9a86488979666b67639fab1a7cd6d",
+      "buyer": "0x9521a2c7a70ea9fe85d218ac6155f7d4978d7b5a",
       "buyer_credit": 3000000000000000000,
       "buyer_withdrawn": true,
       "call_id": 5,
@@ -94,15 +106,16 @@
       "has_required_fields": false,
       "price_gen": 3,
       "price_wei": 3000000000000000000,
-      "provider": "0x39cca217905e3c4f8164d407026d0b992d33d312",
+      "provider": "0x79a9926a458cf93a1e8002a58f7a1d5d35a68b36",
       "provider_credit": 0,
       "provider_withdrawn": false,
+      "snapshot": null,
       "status": "CANCELLED",
       "temperature_band": "",
       "verdict": ""
     },
     {
-      "buyer": "0x11257bc090b9a86488979666b67639fab1a7cd6d",
+      "buyer": "0x9521a2c7a70ea9fe85d218ac6155f7d4978d7b5a",
       "buyer_credit": 0,
       "buyer_withdrawn": false,
       "call_id": 6,
@@ -110,25 +123,14 @@
       "has_required_fields": true,
       "price_gen": 3,
       "price_wei": 3000000000000000000,
-      "provider": "0x39cca217905e3c4f8164d407026d0b992d33d312",
+      "provider": "0x79a9926a458cf93a1e8002a58f7a1d5d35a68b36",
       "provider_credit": 3000000000000000000,
       "provider_withdrawn": true,
-      "status": "SETTLED",
-      "temperature_band": "0_10",
-      "verdict": "RESPONSE_VALID"
-    },
-    {
-      "buyer": "0xebe057fdd4dbe105dba26706ad079089cb502574",
-      "buyer_credit": 0,
-      "buyer_withdrawn": false,
-      "call_id": 7,
-      "endpoint_id": 4,
-      "has_required_fields": true,
-      "price_gen": 2,
-      "price_wei": 2000000000000000000,
-      "provider": "0xebe057fdd4dbe105dba26706ad079089cb502574",
-      "provider_credit": 2000000000000000000,
-      "provider_withdrawn": true,
+      "snapshot": {
+        "temperature_2m": 6,
+        "time": "2026-11-12T16:00",
+        "wind_speed_10m": 9.1
+      },
       "status": "SETTLED",
       "temperature_band": "0_10",
       "verdict": "RESPONSE_VALID"
@@ -140,7 +142,7 @@
       "endpoint_id": 1,
       "price_gen": 3,
       "price_wei": 3000000000000000000,
-      "provider": "0x39cca217905e3c4f8164d407026d0b992d33d312",
+      "provider": "0x79a9926a458cf93a1e8002a58f7a1d5d35a68b36",
       "schema_note": "Single public mode: HTTP 200, JSON, current.temperature_2m is a number in -60..60, current.time is a string. Berlin current weather, no key.",
       "settled_valid": 3,
       "status": "ACTIVE",
@@ -152,7 +154,7 @@
       "endpoint_id": 2,
       "price_gen": 2,
       "price_wei": 2000000000000000000,
-      "provider": "0x39cca217905e3c4f8164d407026d0b992d33d312",
+      "provider": "0x79a9926a458cf93a1e8002a58f7a1d5d35a68b36",
       "schema_note": "Single public mode (same as the good endpoint). This forecast URL returns HTTP 200 JSON without a current field, so it must settle RESPONSE_INVALID.",
       "settled_valid": 0,
       "status": "ACTIVE",
@@ -164,48 +166,35 @@
       "endpoint_id": 3,
       "price_gen": 2,
       "price_wei": 2000000000000000000,
-      "provider": "0x39cca217905e3c4f8164d407026d0b992d33d312",
+      "provider": "0x79a9926a458cf93a1e8002a58f7a1d5d35a68b36",
       "schema_note": "Single public mode (same as the good endpoint). This forecast URL returns HTTP 400 (latitude out of range), so it must settle UNREACHABLE.",
       "settled_valid": 0,
       "status": "ACTIVE",
       "url": "https://api.open-meteo.com/v1/forecast?latitude=999&longitude=999",
       "violations": 0
-    },
-    {
-      "calls": 1,
-      "endpoint_id": 4,
-      "price_gen": 2,
-      "price_wei": 2000000000000000000,
-      "provider": "0xebe057fdd4dbe105dba26706ad079089cb502574",
-      "schema_note": "Single public mode: HTTP 200, JSON, current.temperature_2m is a number in -60..60, current.time is a string. Paris current weather, no key.",
-      "settled_valid": 1,
-      "status": "ACTIVE",
-      "url": "https://api.open-meteo.com/v1/forecast?latitude=48.85&longitude=2.35&current=temperature_2m,wind_speed_10m&timezone=Europe%2FParis",
-      "violations": 0
     }
   ],
   "counts": {
-    "call_count": 7,
+    "call_count": 6,
     "contract_balance_wei": 0,
-    "endpoint_count": 4,
+    "endpoint_count": 3,
     "escrowed_wei": 0,
-    "total_received_wei": 18000000000000000000,
+    "total_received_wei": 16000000000000000000,
     "total_violations": 1,
-    "total_withdrawn_wei": 18000000000000000000
+    "total_withdrawn_wei": 16000000000000000000
   }
 }
 ```
 
 ## Ledger (exact, computed from the live readback above)
 
-- GEN in through the contract's accounting: 18
-- GEN withdrawn through the contract's accounting: 18
+- GEN in through the contract's accounting: 16
+- GEN withdrawn through the contract's accounting: 16
 - Contract balance: 0 GEN, escrowed: 0 GEN, total violations: 1
 - E1: settled_valid 3, violations 0.
 - E2: settled_valid 0, violations 1.
 - E3: settled_valid 0, violations 0.
-- E4: settled_valid 1, violations 0.
-- Calls: 7, endpoints: 4.
+- Calls: 6, endpoints: 3.
 - No value stranded: every failed-payable negative sent 0 GEN by
   design. (Platform behavior, stated honestly in the contract
   docstring: a failed payable call keeps its value in the contract
@@ -216,37 +205,37 @@
 
 | Label | Tx | Result |
 |-------|----|--------|
-| e1-list-good | [0xc9f30df9…](https://explorer-studio.genlayer.com/tx/0xc9f30df9d1732e9429837db991265ac1630f428cee469a9a7be00ce5c5e9d142) | ok |
-| e2-list-bad | [0x922cab51…](https://explorer-studio.genlayer.com/tx/0x922cab512662a9705aecd997b9609aadb845ffb0fc4e566dcd3dfccdaaf110d4) | ok |
-| e3-list-unreachable | [0x5ba52183…](https://explorer-studio.genlayer.com/tx/0x5ba521833708cb32eed7bb9d9588d1a3cdef937ec6a72856821072a34d770464) | ok |
-| c1-call | [0x505399c7…](https://explorer-studio.genlayer.com/tx/0x505399c7e3e250faff2cdd51df4794c9761d9a410f069800bfd680e91e915589) | ok |
-| c1-settle | [0xb83fcac8…](https://explorer-studio.genlayer.com/tx/0xb83fcac895b6f12eea036be7e2c9a5b7ddaea0532921e44933ad0318b82ddcfe) | ok · verdict RESPONSE_VALID |
-| c2-call | [0x102da22a…](https://explorer-studio.genlayer.com/tx/0x102da22a1aae06b8f5d4f50545d9ce7140d056b16e20fb629bc5cda762707aff) | ok |
-| c2-settle | [0xf1ea5aec…](https://explorer-studio.genlayer.com/tx/0xf1ea5aec2b77e56bed765868e4a6dbca41c104df80dc28963ad5d983bd95d0b7) | ok · verdict RESPONSE_VALID |
-| c3-call | [0xe7e92552…](https://explorer-studio.genlayer.com/tx/0xe7e9255236d108b150b94b99fb172896ce9619c67f52497f47f159d8d40350f1) | ok |
-| c3-settle | [0x5899f788…](https://explorer-studio.genlayer.com/tx/0x5899f788203ee56aab9b122ed7bd4d64589896edc558858a0810798345a2e95c) | ok · verdict RESPONSE_INVALID |
-| c4-call | [0xf6f89d2f…](https://explorer-studio.genlayer.com/tx/0xf6f89d2f8671a8e7a0e88c12d47e526808f9308203d36a0198571213f6e89f0e) | ok |
-| c4-settle | [0x5a444bfd…](https://explorer-studio.genlayer.com/tx/0x5a444bfdf8b0e9f2e43899ef129648be452e74de8aae15aae2bf7f10304b7a94) | ok · verdict UNREACHABLE |
-| c5-call | [0xec49813e…](https://explorer-studio.genlayer.com/tx/0xec49813ec6f3644d3950f7b190785f6f668c4bcdacc89e24ed2eee24a4ab4fd6) | ok |
-| neg0-stranger-cancel | [0xdbb6b9e4…](https://explorer-studio.genlayer.com/tx/0xdbb6b9e4005f44e2a243973e88708e0577fae34a2cf9879f7f26842fc351b65b) | error-observed · error ONLY_BUYER_CAN_CANCEL |
-| c5-cancel | [0xc12efeef…](https://explorer-studio.genlayer.com/tx/0xc12efeef8a812a4f88f0dabc3d4487d24fdfb42895734809f95f7ded889b1150) | ok |
-| neg5-stranger-withdraw | [0xcdaae841…](https://explorer-studio.genlayer.com/tx/0xcdaae8411b1822351e88c29431416525478c73c2ae6ca98e06e9a3a1c7af4d5f) | error-observed · error NO_CREDIT |
-| c1-provider-withdraw | [0x10317580…](https://explorer-studio.genlayer.com/tx/0x10317580a1165067995f1e62a9dee08e2adca81fd3f67d6238667ff93ee69dfa) | ok |
-| c2-provider-withdraw | [0x1f30d465…](https://explorer-studio.genlayer.com/tx/0x1f30d465508bd4d24960c366839b444508afc47a58b912f1d38584fc379c9cfe) | ok |
-| c3-buyer-withdraw | [0x99fec49c…](https://explorer-studio.genlayer.com/tx/0x99fec49cf3a01042989c98728daf6b253e0460a68ec76ad13c501eb638e2d539) | ok |
-| c4-buyer-withdraw | [0x58fb1082…](https://explorer-studio.genlayer.com/tx/0x58fb1082e9cf6b04a4474e23164ec96a8bd775c2d60d2de015d7fae723541dfc) | ok |
-| c5-buyer-withdraw | [0xeb75b24a…](https://explorer-studio.genlayer.com/tx/0xeb75b24ad7d967589ce9f6b0a03335e1e272e2ce2caa328b6c6ea86043e383c9) | ok |
-| c6-call | [0x83ca321e…](https://explorer-studio.genlayer.com/tx/0x83ca321e18e556fcd6337be99352f1f4164409b72b1959ffb03d100081be218b) | ok |
-| c6-settle | [0x492bb14f…](https://explorer-studio.genlayer.com/tx/0x492bb14f478bb8f43f6c8575d9f8e84aaf6a1d724421077cc6fafbea2b5568b6) | ok · verdict RESPONSE_VALID |
-| c6-provider-withdraw | [0x303d0c66…](https://explorer-studio.genlayer.com/tx/0x303d0c6659a4e66aa3fcadd6ba04613be4fc2470b3866c1b02221b073d075b3a) | ok |
-| neg6-double-withdraw | [0xd61bef89…](https://explorer-studio.genlayer.com/tx/0xd61bef89b766e4677882041eaf6f0c05bbe58760b093866575237d9597d1e113) | error-observed · error NO_CREDIT |
-| neg1-double-settle | [0xc700597f…](https://explorer-studio.genlayer.com/tx/0xc700597f3e0ede54e0a4e60e1a2887d0065616d3f4f5bb89891e6f4669a6e944) | error-observed · error CALL_NOT_FUNDED |
-| neg2-call-unknown-endpoint | [0x8b29be6d…](https://explorer-studio.genlayer.com/tx/0x8b29be6dd61ac31c94b68d662058ada6f7d9d7da509fe6bd095a95e6cd244696) | error-observed · error ENDPOINT_NOT_FOUND |
-| neg3-list-price-zero | [0xa11bbcd5…](https://explorer-studio.genlayer.com/tx/0xa11bbcd57cf88b3fd4df6a3a3719c2326e4b054a5bbab5028c0935867e9800dc) | error-observed · error PRICE |
-| neg4-list-price-eleven | [0x15e7ff20…](https://explorer-studio.genlayer.com/tx/0x15e7ff202123802daea4da0598c8ea2771d816b9728f48feb72c68bf66719cd2) | error-observed · error PRICE |
-| neg7-list-non-openmeteo-url | [0x19eb0715…](https://explorer-studio.genlayer.com/tx/0x19eb07159b4f6615eb7d8c140dc52ae7d37ba8c4e5e93cdc5f44466c4a3f480b) | error-observed · error URL_HOST |
-| neg8-call-wrong-value | [0x82610409…](https://explorer-studio.genlayer.com/tx/0x82610409ee52347f18437313f3f3434a061353972e4fc952f77c2a510f4a8429) | error-observed · error VALUE_MUST_EQUAL_PRICE |
-| neg9-list-junk-path | [0xfde1a52b…](https://explorer-studio.genlayer.com/tx/0xfde1a52bfc6ca138976bba238ca626c08734e7be5f08715157bc2591e23d7eab) | error-observed · error URL_HOST |
+| e1-list-good | [0xd4541c3e…](https://explorer-studio.genlayer.com/tx/0xd4541c3e54211f82fb009f0968abf6dcac17e8407d1f475561703d7ee532f2ce) | ok |
+| e2-list-bad | [0x80074bb4…](https://explorer-studio.genlayer.com/tx/0x80074bb449a131adc9942e2a777cea902cfe25665c83b1c695b8e2df07c498b1) | ok |
+| e3-list-unreachable | [0x1fa5cd14…](https://explorer-studio.genlayer.com/tx/0x1fa5cd14a0d286448b6375a73f5c2bddad79b219de0d51d4ccb58524cd5dde79) | ok |
+| c1-call | [0x35166515…](https://explorer-studio.genlayer.com/tx/0x351665150cd7f7185ab87834e63f2c644ccd006c5569bfdf0e84ba97d67f577c) | ok |
+| c1-settle | [0xa5594f4e…](https://explorer-studio.genlayer.com/tx/0xa5594f4e11ef9d4bc4483ffa01ceb9da26f55086fa7eaca2aa441cd194cf33af) | ok · verdict RESPONSE_VALID (0_10) |
+| c2-call | [0xf3e0f203…](https://explorer-studio.genlayer.com/tx/0xf3e0f203ac29ce8075edb599e16bafe2a57cfe5b04b88a8a59685f9fe1cfcc74) | ok |
+| c2-settle | [0xe1135ea8…](https://explorer-studio.genlayer.com/tx/0xe1135ea8ae5861883a3f23f26218659670c8af196a6fce342cb08e3dc86ae829) | ok · verdict RESPONSE_VALID (0_10) |
+| c3-call | [0x74cf942d…](https://explorer-studio.genlayer.com/tx/0x74cf942d09dad14fdb021a2de345a78579160ae0f88e6dee4d5ca737b742b02a) | ok |
+| c3-settle | [0xabd5f66b…](https://explorer-studio.genlayer.com/tx/0xabd5f66ba61bc876a65ae43232bcd69bc92e2e076f49c9611c478b2bd47caa35) | ok · verdict RESPONSE_INVALID (NONE) |
+| c4-call | [0xac9ab81d…](https://explorer-studio.genlayer.com/tx/0xac9ab81d3543c32ddc595c49f36dc8eaabd4f3414a118f7c1792198804009c85) | ok |
+| c4-settle | [0x74d87ad5…](https://explorer-studio.genlayer.com/tx/0x74d87ad5edc1caa838ebba765df24c661d97235f1367357ef5ea6548fd595683) | ok · verdict UNREACHABLE (NONE) |
+| c5-call | [0xfde18b97…](https://explorer-studio.genlayer.com/tx/0xfde18b97d7ccc14cb50ffad204c589b1e35e1dec6d970d60a64c5efacdf3976c) | ok |
+| neg0-stranger-cancel | [0x945c1fb0…](https://explorer-studio.genlayer.com/tx/0x945c1fb03a0a70d3aae9e7fe3883c40fe48937b4ff2c2ed8fef4163d2313e81b) | error-observed · error ONLY_BUYER_CAN_CANCEL |
+| c5-cancel | [0x86e0454e…](https://explorer-studio.genlayer.com/tx/0x86e0454e6d7fc53f546b5564c0bd144a2dac7b9d5aa3c32413faf593bad299ee) | ok |
+| neg5-stranger-withdraw | [0x9f3e8ef5…](https://explorer-studio.genlayer.com/tx/0x9f3e8ef55ff553361d5c7280110f26172856b42498b569f1efe7d2863710125e) | error-observed · error NO_CREDIT |
+| c1-provider-withdraw | [0xdc04e6ac…](https://explorer-studio.genlayer.com/tx/0xdc04e6ac0fd0033bd377950146a3527b575ec58db6c5c9a8c3615c5038b3e316) | ok |
+| c2-provider-withdraw | [0x8cde97a4…](https://explorer-studio.genlayer.com/tx/0x8cde97a4a8d7f86ed0d31850dceb4aabfa487ed1a05780a8f05b79c2e544c760) | ok |
+| c3-buyer-withdraw | [0x33284566…](https://explorer-studio.genlayer.com/tx/0x33284566d1c7400a5eff38d012c4bbdecd79afdaf5341d14e4d7fd554ad9278f) | ok |
+| c4-buyer-withdraw | [0x946247fa…](https://explorer-studio.genlayer.com/tx/0x946247fa727c0b3ecbc1e02c0810d3c53dbe4d74128d733c5759897f109bf9a1) | ok |
+| c5-buyer-withdraw | [0xa1120516…](https://explorer-studio.genlayer.com/tx/0xa1120516256f40668dce7c5a0f5bc9d0799e7ec98a5d8ba6e4373b9361b414b0) | ok |
+| c6-call | [0xf4792d05…](https://explorer-studio.genlayer.com/tx/0xf4792d05635ae36d22ed2af64b32aa03f9bf29d234d659f8c211d06678e3a22b) | ok |
+| c6-settle | [0x06e252a3…](https://explorer-studio.genlayer.com/tx/0x06e252a338eb2f9a423cf8fa8da91a625f8f3a6d2a06e96b0be8eacd404c678e) | ok · verdict RESPONSE_VALID (0_10) |
+| c6-provider-withdraw | [0x21aa9d82…](https://explorer-studio.genlayer.com/tx/0x21aa9d826c61aeb830b7b65c37b5818c57edaf81ac6a7b6419d171e535cc3792) | ok |
+| neg6-double-withdraw | [0x934fe4a0…](https://explorer-studio.genlayer.com/tx/0x934fe4a0cd7cc1021911981d5d9572e5a01c73465584a2b3f19e9d12d8975480) | error-observed · error NO_CREDIT |
+| neg1-double-settle | [0xe5681448…](https://explorer-studio.genlayer.com/tx/0xe56814485961ca97dca95d36171e9386090d01c193390212b18e69c7159263d3) | error-observed · error CALL_NOT_FUNDED |
+| neg2-call-unknown-endpoint | [0x63d3bd07…](https://explorer-studio.genlayer.com/tx/0x63d3bd07f1f33978cf8f4840c01c9aa63e12b26573116db03e1ef75149af373c) | error-observed · error ENDPOINT_NOT_FOUND |
+| neg3-list-price-zero | [0xaf6798ca…](https://explorer-studio.genlayer.com/tx/0xaf6798caf5c98132c6f6964817edd3629fab17abee1d94387ce4b2897a6d0325) | error-observed · error PRICE |
+| neg4-list-price-eleven | [0x8db91500…](https://explorer-studio.genlayer.com/tx/0x8db91500f6b4f6b5fc261caa714ea9de5d971ea5d68c05a12bb1f95363708f01) | error-observed · error PRICE |
+| neg7-list-non-openmeteo-url | [0x170a1b79…](https://explorer-studio.genlayer.com/tx/0x170a1b796d63f567a83595c43ac4e2976f1c1c2d0c6d629a65e3d462321edaf5) | error-observed · error URL_HOST |
+| neg8-call-wrong-value | [0x7424e68e…](https://explorer-studio.genlayer.com/tx/0x7424e68e19000ed09cde0c53bf27369feafe1b48e9a8bceaee8fb1674bc2082a) | error-observed · error VALUE_MUST_EQUAL_PRICE |
+| neg9-list-junk-path | [0x8c584e2f…](https://explorer-studio.genlayer.com/tx/0x8c584e2f5b742b645ced34dad5ff9f556838d720e29836d8c9cd14593728b529) | error-observed · error URL_HOST |
 
 ## Adversarial cases (all on-chain)
 
@@ -265,24 +254,16 @@
 | Unreachable endpoint (E3, Open-Meteo forecast with latitude 999, HTTP 400) | UNREACHABLE, buyer refunded, no violation | settled UNREACHABLE, see C4 |
 | Injection text inside a response body | Verdict follows the JSON schema only; instruction text cannot flip it | Mock test in tests/test_callsettle_mock.py (deterministic check, no LLM in the path) |
 
-## Browser write loop C7 (run on the live site 2026-11-12)
+## Browser write loop C8 (pre-registered in EXPECTED.md, not yet run)
 
-Made through the live site in a real browser, with the site's own
+After the scripted evidence run, one more endpoint and call are made
+through the live site in a real browser, with the site's own
 in-browser temporary test account (never presented as a wallet
-signature). Hashes also live in `docs/browser-transactions.json`;
-every hash below was re-read live and confirmed FINALIZED with
-leader SUCCESS.
-
-Known limit from this run: the receipt's "Show the API response for
-this call" button failed — Open-Meteo's free-tier daily request
-limit was exhausted at the time, so the browser could not fetch the
-response to display. The settlement itself was verified by validators
-(RESPONSE_VALID, required fields present); the display feature is
-implemented and works when the API is available.
-
-| Label | Tx | Result |
-|-------|----|--------|
-| e4-list | [0x91214628…](https://explorer-studio.genlayer.com/tx/0x912146280dc37b10911287978ee42a9e4f53aaa9ea8d1b7f180002c33e5236af) | ok |
-| c7-call | [0xcc689942…](https://explorer-studio.genlayer.com/tx/0xcc68994224862590245e29bff854f5ed7abe324f87515cee15f4e952ab9f4549) | ok |
-| c7-settle | [0x142461c2…](https://explorer-studio.genlayer.com/tx/0x142461c216015d68ccbd29d2d655ec31364e55a8a623763c76344bec9197b262) | ok · verdict RESPONSE_VALID (0_10) |
-| c7-provider-withdraw | [0x9a9d7652…](https://explorer-studio.genlayer.com/tx/0x9a9d7652927767054e82a944357d771531ae0d41f7957967e2490bd3bae7b854) | ok |
+signature). No browser transactions have been recorded yet; when
+they are, they are listed in `docs/browser-transactions.json` and
+in the table below, and this file is re-generated. The loop is
+called C8 (on-chain call_id 7 on this contract); the label
+continues the browser-loop sequence from v1.2, whose browser call
+was C7. Its settlement writes a settlement-time snapshot into the
+call record, and the receipt shows that snapshot read from the
+chain.

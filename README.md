@@ -2,14 +2,17 @@
 
 Live site: https://chuanqili77.github.io/callsettle-genlayer/
 
-A buyer escrows payment for one API call. Validators independently
-fetch the provider's public endpoint and judge the live response
-against the single public mode (Open-Meteo weather response: HTTP
-200, JSON, `current.temperature_2m` a number in −60..60,
-`current.time` a string). Valid pays the provider; invalid or
-unreachable refunds the buyer. No middleman — just a receipt.
+Consensus-verified pay-per-call API settlement. A buyer escrows
+payment for one API call. Validators independently fetch the
+provider's public endpoint and judge the live response against the
+single public mode (Open-Meteo weather response: HTTP 200, JSON,
+`current.temperature_2m` a number in −60..60, `current.time` a
+string). Valid pays the provider; invalid or unreachable refunds
+the buyer. No middleman — just a receipt. Open-Meteo is only the
+demo data source; the project claims no exclusive API data and no
+commercial data license.
 
-v1.2 is a single-mode market: every listed endpoint is an
+v1.3 is a single-mode market: every listed endpoint is an
 Open-Meteo forecast endpoint — `list_endpoint` rejects any URL that
 is not exactly the forecast path
 `https://api.open-meteo.com/v1/forecast`, optionally followed by a
@@ -30,11 +33,16 @@ is not verified, and the endpoint URL is the source of truth.
 3. **Settle.** Anyone triggers settlement. Each validator fetches the
    endpoint independently and checks the live response against the
    single public mode. They must agree exactly on verdict +
-   temperature band + required-fields flag, or the call stays FUNDED
-   and settlement can be retried.
+   temperature band + required-fields flag + the settlement-time
+   snapshot, or the call stays FUNDED and settlement can be retried.
+   For a valid response the consensus-verified fields
+   (temperature_2m, time, wind_speed_10m) are written into the call
+   record as its snapshot; other verdicts carry no snapshot.
 4. **Receipt.** Settlement records a pull-payment credit. The
    entitled party withdraws it. A buyer can cancel a FUNDED call for a
-   full refund.
+   full refund. The receipt shows the settlement-time snapshot read
+   from the chain — the data the settlement was based on — and never
+   re-fetches the endpoint.
 
 Verdicts (deterministic code, no LLM anywhere):
 
@@ -45,25 +53,36 @@ Verdicts (deterministic code, no LLM anywhere):
 | `UNREACHABLE` | Endpoint cannot be fetched, or returns a non-200 response | Full refund to the buyer | No violation |
 
 Temperature is a diagnostic only: it is stored as a 10 °C band
-(`LT0 / 0_10 / 10_20 / 20_30 / GT30`), never as a float, never as a
-decision field. A band flip at a boundary can only produce a consensus
-disagreement and a retry — never a wrong settlement.
+(`LT0 / 0_10 / 10_20 / 20_30 / GT30`) and never decides anything.
+The settlement-time snapshot additionally records the exact
+temperature_2m, time and wind_speed_10m from the consensus-verified
+response, for display only — the snapshot never decides anything
+either. A band flip at a boundary can only produce a consensus
+disagreement and a retry — never a wrong settlement. The same
+holds for a snapshot mismatch between validators.
 
 ## Contract
 
 - Network: GenLayer Stable Studionet, Chain ID 61999
-- Contract: `0x0ae3DeB61fA3f84FA15EA164a9B0F2E59469e265`
-- Protocol: `callsettle-1.2`
+- Contract: `0xe0c8716f8f1D8C64c8bd3F1eD7d063AFa2bC2A9E`
+- Protocol: `callsettle-1.3`
 - Source: [`contracts/callsettle.py`](contracts/callsettle.py)
-- Source SHA-256: `3271ff330e97b64a3a2977f630beceb6cf00a70975834ea08aa90a4405973fd2`
-- Deploy tx: [`0xcbed0469e2410972a5529febe9ba9088c82c5aa54081e9998f0f2cccf60323eb`](https://explorer-studio.genlayer.com/tx/0xcbed0469e2410972a5529febe9ba9088c82c5aa54081e9998f0f2cccf60323eb)
-- Explorer: https://explorer-studio.genlayer.com/address/0x0ae3DeB61fA3f84FA15EA164a9B0F2E59469e265
+- Source SHA-256: `90c67e3e6c48a65cf5c0c665ab80e4bcd8aa5ea8a00cac99fe0dcadbc3c2fe97`
+- Deploy tx: [`0xd99bcf5080aecb86f83ed295bed71ae2a3df2308ecb68f4d23d655bd9f2b40d9`](https://explorer-studio.genlayer.com/tx/0xd99bcf5080aecb86f83ed295bed71ae2a3df2308ecb68f4d23d655bd9f2b40d9)
+- Explorer: https://explorer-studio.genlayer.com/address/0xe0c8716f8f1D8C64c8bd3F1eD7d063AFa2bC2A9E
 - Byte parity: deployed code is byte-for-byte identical to the repo
   source — check with `node scripts/byte_parity.mjs`.
-- Superseded v1.2 first deployment (same source, abandoned):
-  `0xF183E90Ea3C2Af4DcD54eeB6a2595732A80AC9e8` — its evidence run
-  stalled on a network-level stuck transaction (see
-  [`evidence/v1.2-first-deploy/NOTES.md`](evidence/v1.2-first-deploy/NOTES.md)).
+- Abandoned first v1.3 deploy (same protocol version, cannot settle):
+  `0x2992e9f69e8aAfBCB0E25AD1B433B3b31C0a7eAf` — its consensus result
+  carried a nested snapshot dict with floats, which the consensus
+  layer cannot encode, so every settle crashed with `exit_code 1`.
+  Closed out at balance 0 GEN (3 GEN in = 3 GEN out); details in
+  [`evidence/v1.3-first-deploy/NOTES.md`](evidence/v1.3-first-deploy/NOTES.md).
+  No transaction from it is used as evidence for this contract.
+- Superseded v1.2 contract (protocol callsettle-1.2, now abandoned):
+  `0x0ae3DeB61fA3f84FA15EA164a9B0F2E59469e265` — its evidence is
+  archived in [`evidence/v1.2/`](evidence/v1.2/). v1.2's final state
+  was 18 GEN in, 18 GEN withdrawn, 0 GEN balance.
 - Superseded v1.1 contract (protocol callsettle-1.1, now abandoned):
   `0x58c71cDA976912e9F16438317dE7804523EFaEe6` — its evidence is
   archived in [`evidence/v1.1/`](evidence/v1.1/). v1.1's final state
@@ -106,28 +125,30 @@ FINALIZED — 3 listings, 6 calls, 5 settlements, 1 cancel,
 16 GEN in = 16 GEN out, escrow 0, 1 violation (the bad-mode
 endpoint only), contract balance 0 GEN: no value stranded — every
 failed-payable negative sent 0 GEN by design, and C6's provider
-credit was withdrawn inside the run. The browser write loop (C7:
+credit was withdrawn inside the run. The browser write loop (C8:
 list, call, settle, withdraw — 4 more FINALIZED transactions,
 pre-registered in EXPECTED.md) brings the final live state to
 18 GEN in = 18 GEN out, balance 0 GEN. Testnet GEN only, zero
-cash cost.
+cash cost. The C8 settlement writes a settlement-time snapshot
+into the call record; the receipt shows that snapshot read from
+the chain.
 
 Verify independently: `node scripts/verify_evidence.mjs` re-reads every
 transaction live and re-checks the final readback against
 `EXPECTED.md`. Mock tests: `python3 tests/test_callsettle_mock.py`.
-Clean public text (other-project names, internal agent language,
-internal process terms, work-directory paths) is checked
-mechanically before every push: `npm run check-clean`.
 
 ## What this project does not prove
 
 It does not prove an endpoint is business-correct (only that its
 response matches the single public mode); it does not prove keyed endpoints
 work; it does not prove temperature readings are accurate (temperature
-is stored only as a 10 °C band and never decides anything). It does
-not guarantee the third-party API is always available or that its
-responses stay the same over time — settlement verifies the response
-validators fetched at settlement time. The schema note stored at
+decides nothing: the verdict uses only the response shape, and the
+exact temperature is kept only as a settlement-time snapshot for
+display). It does not guarantee the third-party API is always
+available or that its responses stay the same over time — settlement verifies the response
+validators fetched at settlement time. The snapshot is the record of
+what a settlement was based on; the receipt shows the snapshot read
+from the chain and never fetches the endpoint again. The schema note stored at
 listing is provider-written text, checked only for length (10–280
 chars); it is not verified, and the endpoint URL is the source of
 truth.
@@ -137,7 +158,7 @@ truth.
 - Open-Meteo weather endpoints only; an endpoint that needs an API key
   cannot be listed meaningfully, because validators fetch without
   credentials.
-- v1.2 has no endpoint delist action: a listed endpoint stays ACTIVE.
+- v1.3 has no endpoint delist action: a listed endpoint stays ACTIVE.
   A provider that wants to stop selling simply stops being called; no
   funds are at risk from a stale listing because every call is paid
   per call and settled against the live response.
@@ -146,6 +167,15 @@ truth.
   while FUNDED.
 - A temperature band can flip near a boundary value; a flip only
   produces a consensus disagreement and a retry.
+- A settlement-time snapshot exists only for RESPONSE_VALID
+  settlements. If the demo API is rate-limited when settlement runs,
+  validators see no usable response and the call settles UNREACHABLE
+  with no snapshot — that is the honest outcome, not a display
+  failure. (On 2026-11-12 the v1.2 browser receipt failed to display
+  a re-fetched response for exactly this reason: the shared browser
+  network hit the free-tier daily limit, HTTP 429. v1.3 shows the
+  on-chain snapshot instead, so the display no longer depends on
+  the browser's network.)
 
 ## Run it locally
 
@@ -153,7 +183,6 @@ truth.
 npm install
 npm run build        # builds the site into docs/
 npm test             # mock tests
-npm run check-clean  # banned phrases in public files (must pass before push)
 node scripts/byte_parity.mjs
 node scripts/verify_evidence.mjs
 ```

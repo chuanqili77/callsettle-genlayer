@@ -1,0 +1,185 @@
+{
+  "network": "Stable Studionet",
+  "chain_id": 61999,
+  "contract_address": "0x0ae3DeB61fA3f84FA15EA164a9B0F2E59469e265",
+  "deploy_tx": "0xcbed0469e2410972a5529febe9ba9088c82c5aa54081e9998f0f2cccf60323eb",
+  "complete": true,
+  "transactions": [
+    {
+      "label": "e1-list-good",
+      "hash": "0xc9f30df9d1732e9429837db991265ac1630f428cee469a9a7be00ce5c5e9d142",
+      "result": "ok"
+    },
+    {
+      "label": "e2-list-bad",
+      "hash": "0x922cab512662a9705aecd997b9609aadb845ffb0fc4e566dcd3dfccdaaf110d4",
+      "result": "ok"
+    },
+    {
+      "label": "e3-list-unreachable",
+      "hash": "0x5ba521833708cb32eed7bb9d9588d1a3cdef937ec6a72856821072a34d770464",
+      "result": "ok"
+    },
+    {
+      "label": "c1-call",
+      "hash": "0x505399c7e3e250faff2cdd51df4794c9761d9a410f069800bfd680e91e915589",
+      "result": "ok"
+    },
+    {
+      "label": "c1-settle",
+      "hash": "0xb83fcac895b6f12eea036be7e2c9a5b7ddaea0532921e44933ad0318b82ddcfe",
+      "result": "ok",
+      "verdict": "RESPONSE_VALID",
+      "caller": "OUT"
+    },
+    {
+      "label": "c2-call",
+      "hash": "0x102da22a1aae06b8f5d4f50545d9ce7140d056b16e20fb629bc5cda762707aff",
+      "result": "ok"
+    },
+    {
+      "label": "c2-settle",
+      "hash": "0xf1ea5aec2b77e56bed765868e4a6dbca41c104df80dc28963ad5d983bd95d0b7",
+      "result": "ok",
+      "verdict": "RESPONSE_VALID",
+      "caller": "OUT"
+    },
+    {
+      "label": "c3-call",
+      "hash": "0xe7e9255236d108b150b94b99fb172896ce9619c67f52497f47f159d8d40350f1",
+      "result": "ok"
+    },
+    {
+      "label": "c3-settle",
+      "hash": "0x5899f788203ee56aab9b122ed7bd4d64589896edc558858a0810798345a2e95c",
+      "result": "ok",
+      "verdict": "RESPONSE_INVALID",
+      "caller": "OUT"
+    },
+    {
+      "label": "c4-call",
+      "hash": "0xf6f89d2f8671a8e7a0e88c12d47e526808f9308203d36a0198571213f6e89f0e",
+      "result": "ok"
+    },
+    {
+      "label": "c4-settle",
+      "hash": "0x5a444bfdf8b0e9f2e43899ef129648be452e74de8aae15aae2bf7f10304b7a94",
+      "result": "ok",
+      "verdict": "UNREACHABLE",
+      "caller": "OUT"
+    },
+    {
+      "label": "c5-call",
+      "hash": "0xec49813ec6f3644d3950f7b190785f6f668c4bcdacc89e24ed2eee24a4ab4fd6",
+      "result": "ok"
+    },
+    {
+      "label": "neg0-stranger-cancel",
+      "hash": "0xdbb6b9e4005f44e2a243973e88708e0577fae34a2cf9879f7f26842fc351b65b",
+      "result": "error-observed",
+      "expected_error": "ONLY_BUYER_CAN_CANCEL"
+    },
+    {
+      "label": "c5-cancel",
+      "hash": "0xc12efeef8a812a4f88f0dabc3d4487d24fdfb42895734809f95f7ded889b1150",
+      "result": "ok"
+    },
+    {
+      "label": "neg5-stranger-withdraw",
+      "hash": "0xcdaae8411b1822351e88c29431416525478c73c2ae6ca98e06e9a3a1c7af4d5f",
+      "result": "error-observed",
+      "expected_error": "NO_CREDIT"
+    },
+    {
+      "label": "c1-provider-withdraw",
+      "hash": "0x10317580a1165067995f1e62a9dee08e2adca81fd3f67d6238667ff93ee69dfa",
+      "result": "ok"
+    },
+    {
+      "label": "c2-provider-withdraw",
+      "hash": "0x1f30d465508bd4d24960c366839b444508afc47a58b912f1d38584fc379c9cfe",
+      "result": "ok"
+    },
+    {
+      "label": "c3-buyer-withdraw",
+      "hash": "0x99fec49cf3a01042989c98728daf6b253e0460a68ec76ad13c501eb638e2d539",
+      "result": "ok"
+    },
+    {
+      "label": "c4-buyer-withdraw",
+      "hash": "0x58fb1082e9cf6b04a4474e23164ec96a8bd775c2d60d2de015d7fae723541dfc",
+      "result": "ok"
+    },
+    {
+      "label": "c5-buyer-withdraw",
+      "hash": "0xeb75b24ad7d967589ce9f6b0a03335e1e272e2ce2caa328b6c6ea86043e383c9",
+      "result": "ok"
+    },
+    {
+      "label": "c6-call",
+      "hash": "0x83ca321e18e556fcd6337be99352f1f4164409b72b1959ffb03d100081be218b",
+      "result": "ok"
+    },
+    {
+      "label": "c6-settle",
+      "hash": "0x492bb14f478bb8f43f6c8575d9f8e84aaf6a1d724421077cc6fafbea2b5568b6",
+      "result": "ok",
+      "verdict": "RESPONSE_VALID",
+      "caller": "OUT"
+    },
+    {
+      "label": "c6-provider-withdraw",
+      "hash": "0x303d0c6659a4e66aa3fcadd6ba04613be4fc2470b3866c1b02221b073d075b3a",
+      "result": "ok"
+    },
+    {
+      "label": "neg6-double-withdraw",
+      "hash": "0xd61bef89b766e4677882041eaf6f0c05bbe58760b093866575237d9597d1e113",
+      "result": "error-observed",
+      "expected_error": "NO_CREDIT"
+    },
+    {
+      "label": "neg1-double-settle",
+      "hash": "0xc700597f3e0ede54e0a4e60e1a2887d0065616d3f4f5bb89891e6f4669a6e944",
+      "result": "error-observed",
+      "expected_error": "CALL_NOT_FUNDED"
+    },
+    {
+      "label": "neg2-call-unknown-endpoint",
+      "hash": "0x8b29be6dd61ac31c94b68d662058ada6f7d9d7da509fe6bd095a95e6cd244696",
+      "result": "error-observed",
+      "expected_error": "ENDPOINT_NOT_FOUND"
+    },
+    {
+      "label": "neg3-list-price-zero",
+      "hash": "0xa11bbcd57cf88b3fd4df6a3a3719c2326e4b054a5bbab5028c0935867e9800dc",
+      "result": "error-observed",
+      "expected_error": "PRICE"
+    },
+    {
+      "label": "neg4-list-price-eleven",
+      "hash": "0x15e7ff202123802daea4da0598c8ea2771d816b9728f48feb72c68bf66719cd2",
+      "result": "error-observed",
+      "expected_error": "PRICE"
+    },
+    {
+      "label": "neg7-list-non-openmeteo-url",
+      "hash": "0x19eb07159b4f6615eb7d8c140dc52ae7d37ba8c4e5e93cdc5f44466c4a3f480b",
+      "result": "error-observed",
+      "expected_error": "URL_HOST"
+    },
+    {
+      "label": "neg8-call-wrong-value",
+      "hash": "0x82610409ee52347f18437313f3f3434a061353972e4fc952f77c2a510f4a8429",
+      "result": "error-observed",
+      "expected_error": "VALUE_MUST_EQUAL_PRICE"
+    },
+    {
+      "label": "neg9-list-junk-path",
+      "hash": "0xfde1a52bfc6ca138976bba238ca626c08734e7be5f08715157bc2591e23d7eab",
+      "result": "error-observed",
+      "expected_error": "URL_HOST",
+      "unchanged_state": true
+    }
+  ]
+}

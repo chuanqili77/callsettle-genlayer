@@ -170,7 +170,7 @@ async function resolvePending() {
     } else if (good(tx)) {
       const c = await readCall(callIdFor(label));
       if (c.verdict !== SETTLE_INFO[label].verdict) throw new Error('pending ' + label + ' WRONG VERDICT: expected ' + SETTLE_INFO[label].verdict + ', got ' + c.verdict);
-      record(label, hash, 'ok', {verdict: c.verdict, temperature_band: c.temperature_band, caller: SETTLE_INFO[label].caller});
+      record(label, hash, 'ok', {verdict: c.verdict, temperature_band: c.temperature_band, snapshot: c.snapshot, caller: SETTLE_INFO[label].caller});
     } else throw new Error('pending ' + label + ' settle tx not good: ' + JSON.stringify(tx).slice(0, 300));
   } else {
     if (!good(tx)) throw new Error('pending ' + label + ' did not reach FINALIZED+AGREE+SUCCESS: ' + JSON.stringify(tx).slice(0, 300));
@@ -210,7 +210,7 @@ async function writeErr(label, who, fn, args, code, value = 0n) {
   const afterCounts = await readCounts();
   const extra = {expected_error: code, unchanged_state: true};
   if (beforeCalls !== afterCalls || beforeEndpoints !== afterEndpoints || JSON.stringify(beforeCounts) !== JSON.stringify(afterCounts)) {
-    // v1.2: every failed-payable negative sends 0 GEN, so NO state
+    // v1.3: every failed-payable negative sends 0 GEN, so NO state
     // change of any kind is allowed. (v1.0 had one documented
     // exception: a failed payable kept its value. That exception is
     // gone by design — no negative in this run carries value.)
@@ -239,10 +239,33 @@ async function settleFlow(label, callId, expectedVerdict, caller = 'OUT') {
     if (c.verdict !== expectedVerdict) {
       throw new Error(label + ' WRONG VERDICT: expected ' + expectedVerdict + ', got ' + c.verdict + ' — aborting, inspect, never paper over');
     }
-    record(label, hash, 'ok', {verdict: c.verdict, temperature_band: c.temperature_band, attempts: attempt, caller});
+    checkSnapshot(c, label);
+    record(label, hash, 'ok', {verdict: c.verdict, temperature_band: c.temperature_band, snapshot: c.snapshot, attempts: attempt, caller});
     return hash;
   }
   throw new Error(label + ' consensus disagreed 3 times — aborting');
+}
+
+function bandOf(temp) {
+  if (temp < 0) return 'LT0';
+  if (temp < 10) return '0_10';
+  if (temp < 20) return '10_20';
+  if (temp < 30) return '20_30';
+  return 'GT30';
+}
+function checkSnapshot(c, label) {
+  // Settlement-time snapshot: present exactly for RESPONSE_VALID,
+  // band derived from its temperature, time a valid ISO string.
+  const s = c.snapshot;
+  if (c.verdict === 'RESPONSE_VALID') {
+    if (!s || typeof s !== 'object') throw new Error(label + ' VALID call has no snapshot');
+    if (typeof s.temperature_2m !== 'number' || s.temperature_2m < -60 || s.temperature_2m > 60) throw new Error(label + ' snapshot temperature out of range');
+    if (typeof s.time !== 'string' || !s.time || Number.isNaN(Date.parse(s.time))) throw new Error(label + ' snapshot time is not a valid ISO time');
+    if (s.wind_speed_10m !== null && s.wind_speed_10m !== undefined && (typeof s.wind_speed_10m !== 'number' || s.wind_speed_10m < 0)) throw new Error(label + ' snapshot wind is not a non-negative number');
+    if (bandOf(s.temperature_2m) !== c.temperature_band) throw new Error(label + ' snapshot band does not match its temperature');
+  } else if (s !== null && s !== undefined) {
+    throw new Error(label + ' non-VALID call must carry snapshot null, got ' + JSON.stringify(s));
+  }
 }
 
 const GOOD_URL = 'https://api.open-meteo.com/v1/forecast?latitude=52.52&longitude=13.41&current=temperature_2m,wind_speed_10m&timezone=Europe%2FBerlin';
@@ -338,10 +361,11 @@ const expectCalls = {
 for (const [key, id] of Object.entries(cids)) {
   const c = await readCall(id);
   const e = expectCalls[id];
-  console.log(key, 'id', id, 'status', c.status, 'verdict', c.verdict, 'band', c.temperature_band, 'provider_credit', c.provider_credit, 'buyer_credit', c.buyer_credit);
+  console.log(key, 'id', id, 'status', c.status, 'verdict', c.verdict, 'band', c.temperature_band, 'snapshot', JSON.stringify(c.snapshot), 'provider_credit', c.provider_credit, 'buyer_credit', c.buyer_credit);
   if (c.status !== e.status || c.verdict !== e.verdict || c.provider_credit !== e.provider_credit || c.buyer_credit !== e.buyer_credit) {
     throw new Error(key + ' does not match EXPECTED.md');
   }
+  checkSnapshot(c, key);
   if (c.status !== 'CANCELLED' && !c.has_required_fields === (c.verdict === 'RESPONSE_VALID')) {
     // has_required_fields is true exactly for VALID; checked by the line below.
   }
@@ -357,7 +381,7 @@ const counts = await readCounts();
 console.log('counts:', JSON.stringify(counts));
 // Ledger: 16 GEN received and 16 GEN withdrawn through the contract's
 // own accounting (escrowed 0). Contract balance is 0 GEN: no value was
-// stranded — every failed-payable negative in v1.2 sent 0 GEN by design
+// stranded — every failed-payable negative in v1.3 sent 0 GEN by design
 // (see EXPECTED.md, "Honest note on failed payables"), and C6's
 // provider credit was withdrawn inside the run.
 if (counts.total_received_wei !== 16000000000000000000 || counts.total_withdrawn_wei !== 16000000000000000000 || counts.contract_balance_wei !== 0 || counts.escrowed_wei !== 0 || counts.total_violations !== 1) {

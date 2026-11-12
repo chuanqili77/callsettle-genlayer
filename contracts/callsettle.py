@@ -1,7 +1,7 @@
 # { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
 """CallSettle: pay-per-call settlement for public APIs on GenLayer Studionet.
 
-Protocol callsettle-1.2. The market is single-mode: every listed
+Protocol callsettle-1.3. The market is single-mode: every listed
 endpoint is an Open-Meteo weather endpoint (list_endpoint rejects
 any URL that is not exactly the forecast path, optionally followed
 by a query string); providers compete on
@@ -11,10 +11,32 @@ validators each independently fetch the endpoint URL and check the
 live response against the one public mode (HTTP 200, JSON,
 current.temperature_2m a number in -60..60, current.time a string).
 They must agree exactly on verdict + temperature_band +
-has_required_fields, or the call stays FUNDED and settlement can be
-retried (fail-closed). The schema_note stored at listing is a
+has_required_fields + the settlement-time snapshot, or the call stays
+FUNDED and settlement can be retried (fail-closed). The schema_note
+stored at listing is a
 human-readable description of this single mode, not a per-endpoint
 settlement rule: it is never fed into consensus.
+
+Settlement-time snapshot (v1.3): for a RESPONSE_VALID settlement,
+the validators' consensus-verified response is reduced to
+standardized fields and written into the call record:
+temperature_2m, current.time, wind_speed_10m (null when the
+response carries no wind field — wind is not part of the single
+public mode). get_call reads the snapshot back; the frontend shows
+exactly these on-chain fields and never re-fetches the endpoint,
+so what the buyer sees is the data the settlement was based on,
+not a later fetch. A snapshot exists only for RESPONSE_VALID calls;
+INVALID, UNREACHABLE and CANCELLED calls carry snapshot null.
+
+Consensus encoding rule (learned from a failed first v1.3 deploy):
+the consensus layer cannot encode a float (or a nested dict) in a
+non-deterministic result — the leader and every validator crash
+with exit_code 1. So the consensus value carries the snapshot as
+flat integer fields only: temperature and wind in tenths of a
+degree / km/h, time as a string. settle_call divides by 10 when
+it writes the stored snapshot, so get_call still reads the real
+values (temperature_2m 6.0, wind_speed_10m 10.1). The band is
+derived from the tenths, never from a float, inside consensus.
 
 Verdicts (deterministic code, no LLM anywhere in this contract):
   RESPONSE_VALID   -> escrow pays the provider, no violation
@@ -26,14 +48,20 @@ payable call KEEPS its value in the contract: on Studionet a failed
 payable is not refunded, so any value sent with a call that fails
 stays in the contract. The frontend only ever submits the exact price to an
 existing ACTIVE endpoint, so that path is unreachable from the UI,
-and the v1.2 evidence run sends 0 GEN on its failed-payable
+and the v1.3 evidence run sends 0 GEN on its failed-payable
 negatives, so no value is stranded there.
 
 Temperature is a decision-free diagnostic only: it is stored as a
-10-degree band (LT0 / 0_10 / 10_20 / 20_30 / GT30), never as a float,
-never as a decision field. Validators fetch inside the same consensus
+10-degree band (LT0 / 0_10 / 10_20 / 20_30 / GT30), never as a
+decision field. The settlement-time snapshot additionally records
+the exact temperature_2m, time and wind_speed_10m from the
+consensus-verified response, for display only — the snapshot never
+decides anything. Validators fetch inside the same consensus
 round, so drift is small; a band flip at a boundary can only produce
-MAJORITY_DISAGREE and a retry, never a wrong settlement.
+MAJORITY_DISAGREE and a retry, never a wrong settlement. The same
+holds for a snapshot mismatch: validators that fetched different
+responses disagree, the call stays FUNDED, and settlement can be
+retried.
 
 Capacity (checked in the contract, mathematically consistent):
   MAX_ENDPOINTS_PER_PROVIDER = 8, MAX_ENDPOINTS_TOTAL = 32.
@@ -51,10 +79,14 @@ caller. No time gates anywhere (Studionet has no clock): every
 transition is an explicit action.
 
 Known limits (neutral, product-scope):
-  * Single-mode market in v1.2: only Open-Meteo forecast endpoints
+  * Single-mode market in v1.3: only Open-Meteo forecast endpoints
     can be listed (URL path enforced in list_endpoint). An endpoint
     that needs an API key cannot be listed meaningfully, because
     validators fetch without credentials.
+  * A snapshot exists only for RESPONSE_VALID settlements. A later
+    fetch of the same endpoint can return different weather; the
+    snapshot is the record of what settlement was based on, and the
+    frontend shows the snapshot instead of fetching again.
   * An endpoint has no delist action in v1: a listed endpoint stays
     ACTIVE. A provider that wants to stop selling simply stops being
     called; no funds are at risk from a stale listing because every
@@ -110,61 +142,98 @@ def _band(temp):
     return 'GT30'
 
 
+def _band_from_tenths(t):
+    if t < 0:
+        return 'LT0'
+    if t < 100:
+        return '0_10'
+    if t < 200:
+        return '10_20'
+    if t < 300:
+        return '20_30'
+    return 'GT30'
+
+
 def _check_body(text):
     """Deterministic schema check on the fetched response body.
 
-    Returns (has_required_fields, verdict, band). No LLM: the response
-    is data to check, never instructions. Instruction-like text inside
-    a body cannot change the verdict, because only the JSON shape is
-    examined.
+    Returns (has_required_fields, verdict, band, temp_tenths,
+    time_str, wind_tenths). No LLM: the response is data to check,
+    never instructions. Instruction-like text inside a body cannot
+    change the verdict, because only the JSON shape is examined.
+    The snapshot fields are integers only (temperature and wind in
+    tenths, time as a string) because the consensus layer cannot
+    encode a float; any other response gets all three snapshot
+    fields None. Wind is not part of the single public mode: a
+    missing or non-numeric wind field becomes wind None, never an
+    INVALID verdict.
     """
     try:
         data = json.loads(text)
     except Exception:
-        return False, 'RESPONSE_INVALID', 'NONE'
+        return False, 'RESPONSE_INVALID', 'NONE', None, None, None
     if not isinstance(data, dict):
-        return False, 'RESPONSE_INVALID', 'NONE'
+        return False, 'RESPONSE_INVALID', 'NONE', None, None, None
     cur = data.get('current')
     if not isinstance(cur, dict):
-        return False, 'RESPONSE_INVALID', 'NONE'
+        return False, 'RESPONSE_INVALID', 'NONE', None, None, None
     temp = cur.get('temperature_2m')
     tstr = cur.get('time')
     if not isinstance(tstr, str) or not tstr:
-        return False, 'RESPONSE_INVALID', 'NONE'
+        return False, 'RESPONSE_INVALID', 'NONE', None, None, None
     if isinstance(temp, bool) or not isinstance(temp, (int, float)):
-        return False, 'RESPONSE_INVALID', 'NONE'
+        return False, 'RESPONSE_INVALID', 'NONE', None, None, None
     if not -60 <= temp <= 60:
-        return False, 'RESPONSE_INVALID', 'NONE'
-    return True, 'RESPONSE_VALID', _band(temp)
+        return False, 'RESPONSE_INVALID', 'NONE', None, None, None
+    wind = cur.get('wind_speed_10m')
+    if isinstance(wind, bool) or not isinstance(wind, (int, float)):
+        wind_tenths = None
+    else:
+        wind_tenths = int(round(wind * 10))
+    return True, 'RESPONSE_VALID', _band(temp), int(round(temp * 10)), \
+        tstr, wind_tenths
 
 
 def _fetch_once(url):
     """One validator's independent fetch + check. Never raises: a fetch
-    failure is UNREACHABLE, a bad body is RESPONSE_INVALID."""
+    failure is UNREACHABLE, a bad body is RESPONSE_INVALID. Only a
+    RESPONSE_VALID fetch carries snapshot fields, as flat integer
+    fields (see the consensus encoding rule above)."""
     try:
         response = gl.nondet.web.request(url, method='GET')
     except Exception:
         return {'verdict': 'UNREACHABLE', 'temperature_band': 'NONE',
-                'has_required_fields': False}
+                'has_required_fields': False,
+                'snap_temp_tenths': None, 'snap_time': None,
+                'snap_wind_tenths': None}
     status = getattr(response, 'status', None)
     if status != 200:
         return {'verdict': 'UNREACHABLE', 'temperature_band': 'NONE',
-                'has_required_fields': False}
+                'has_required_fields': False,
+                'snap_temp_tenths': None, 'snap_time': None,
+                'snap_wind_tenths': None}
     body = response.body
     if isinstance(body, bytes):
         try:
             text = body.decode('utf-8')
         except Exception:
             return {'verdict': 'RESPONSE_INVALID',
-                    'temperature_band': 'NONE', 'has_required_fields': False}
+                    'temperature_band': 'NONE',
+                    'has_required_fields': False,
+                    'snap_temp_tenths': None, 'snap_time': None,
+                    'snap_wind_tenths': None}
     elif isinstance(body, str):
         text = body
     else:
         return {'verdict': 'RESPONSE_INVALID', 'temperature_band': 'NONE',
-                'has_required_fields': False}
-    has, verdict, band = _check_body(text)
+                'has_required_fields': False,
+                'snap_temp_tenths': None, 'snap_time': None,
+                'snap_wind_tenths': None}
+    has, verdict, band, temp_tenths, tstr, wind_tenths = _check_body(text)
     return {'verdict': verdict, 'temperature_band': band,
-            'has_required_fields': has}
+            'has_required_fields': has,
+            'snap_temp_tenths': temp_tenths, 'snap_time': tstr,
+            'snap_wind_tenths': wind_tenths}
 
 
 def _validate_check(res):
@@ -173,6 +242,9 @@ def _validate_check(res):
     verdict = res.get('verdict')
     band = res.get('temperature_band')
     has = res.get('has_required_fields')
+    temp_tenths = res.get('snap_temp_tenths')
+    tstr = res.get('snap_time')
+    wind_tenths = res.get('snap_wind_tenths')
     if verdict not in VERDICTS:
         fail('CHECK_VERDICT')
     if band not in BANDS:
@@ -183,8 +255,27 @@ def _validate_check(res):
         fail('CHECK_VALID')
     if verdict in ('RESPONSE_INVALID', 'UNREACHABLE') and has:
         fail('CHECK_INVALID')
+    if verdict == 'RESPONSE_VALID':
+        if isinstance(temp_tenths, bool) \
+                or not isinstance(temp_tenths, int) \
+                or not -600 <= temp_tenths <= 600:
+            fail('CHECK_SNAPSHOT_TEMP')
+        if not isinstance(tstr, str) or not tstr:
+            fail('CHECK_SNAPSHOT_TIME')
+        if wind_tenths is not None and (isinstance(wind_tenths, bool)
+                                        or not isinstance(wind_tenths, int)
+                                        or wind_tenths < 0):
+            fail('CHECK_SNAPSHOT_WIND')
+        if _band_from_tenths(temp_tenths) != band:
+            fail('CHECK_SNAPSHOT_BAND')
+    else:
+        if temp_tenths is not None or tstr is not None \
+                or wind_tenths is not None:
+            fail('CHECK_SNAPSHOT_NONE')
     return {'verdict': verdict, 'temperature_band': band,
-            'has_required_fields': has}
+            'has_required_fields': has,
+            'snap_temp_tenths': temp_tenths, 'snap_time': tstr,
+            'snap_wind_tenths': wind_tenths}
 
 
 def _run_check(url):
@@ -207,7 +298,10 @@ def _run_check(url):
             return False
         return (leader.get('verdict') == mine.get('verdict')
                 and leader.get('temperature_band') == mine.get('temperature_band')
-                and leader.get('has_required_fields') == mine.get('has_required_fields'))
+                and leader.get('has_required_fields') == mine.get('has_required_fields')
+                and leader.get('snap_temp_tenths') == mine.get('snap_temp_tenths')
+                and leader.get('snap_time') == mine.get('snap_time')
+                and leader.get('snap_wind_tenths') == mine.get('snap_wind_tenths'))
 
     return gl.vm.run_nondet_unsafe(leader_fn, validator_fn)
 
@@ -327,6 +421,7 @@ class CallSettle(gl.Contract):
             'status': 'FUNDED',
             'verdict': '',
             'temperature_band': '',
+            'snapshot': None,
             'has_required_fields': False,
             'buyer_credit': 0,
             'provider_credit': 0,
@@ -345,6 +440,20 @@ class CallSettle(gl.Contract):
         c['verdict'] = checked['verdict']
         c['temperature_band'] = checked['temperature_band']
         c['has_required_fields'] = checked['has_required_fields']
+        if checked['verdict'] == 'RESPONSE_VALID':
+            # The stored snapshot divides the consensus tenths back to
+            # real values for display; the division happens in
+            # deterministic code after consensus, so no float ever
+            # crosses the consensus layer.
+            c['snapshot'] = {
+                'temperature_2m': checked['snap_temp_tenths'] / 10,
+                'time': checked['snap_time'],
+                'wind_speed_10m': (checked['snap_wind_tenths'] / 10
+                                   if checked['snap_wind_tenths'] is not None
+                                   else None),
+            }
+        else:
+            c['snapshot'] = None
         if checked['verdict'] == 'RESPONSE_VALID':
             c['status'] = 'SETTLED'
             c['provider_credit'] = int(c['price_wei'])
@@ -399,7 +508,7 @@ class CallSettle(gl.Contract):
 
     @gl.public.view
     def get_protocol(self) -> str:
-        return 'callsettle-1.2'
+        return 'callsettle-1.3'
 
     @gl.public.view
     def get_limits(self) -> str:

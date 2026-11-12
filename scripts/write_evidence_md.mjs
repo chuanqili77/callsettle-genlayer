@@ -45,33 +45,38 @@ const rows = txs.transactions.map((r) => {
 
 const browserRows = browserTxs.map((r) => {
   const extra = r.verdict ? ` · verdict ${r.verdict}${r.temperature_band ? ` (${r.temperature_band})` : ''}` : '';
-  return `| ${r.label} | ${txLink(r.hash)} | ${r.result}${extra} |`;
+  const snap = r.snapshot ? ` · snapshot ${r.snapshot.temperature_2m} °C @ ${r.snapshot.time}` : '';
+  return `| ${r.label} | ${txLink(r.hash)} | ${r.result}${extra}${snap} |`;
 }).join('\n');
 
 const browserSection = browserTxs.length === 0
-  ? `## Browser write loop C7 (pre-registered in EXPECTED.md, not yet run)
+  ? `## Browser write loop C8 (pre-registered in EXPECTED.md, not yet run)
 
 After the scripted evidence run, one more endpoint and call are made
 through the live site in a real browser, with the site's own
 in-browser temporary test account (never presented as a wallet
 signature). No browser transactions have been recorded yet; when
 they are, they are listed in \`docs/browser-transactions.json\` and
-in the table below, and this file is re-generated.
+in the table below, and this file is re-generated. The loop is
+called C8 (on-chain call_id 7 on this contract); the label
+continues the browser-loop sequence from v1.2, whose browser call
+was C7. Its settlement writes a settlement-time snapshot into the
+call record, and the receipt shows that snapshot read from the
+chain.
 `
-  : `## Browser write loop C7 (run on the live site 2026-11-12)
+  : `## Browser write loop C8 (run on the live site)
 
 Made through the live site in a real browser, with the site's own
 in-browser temporary test account (never presented as a wallet
 signature). Hashes also live in \`docs/browser-transactions.json\`;
 every hash below was re-read live and confirmed FINALIZED with
-leader SUCCESS.
-
-Known limit from this run: the receipt's "Show the API response for
-this call" button failed — Open-Meteo's free-tier daily request
-limit was exhausted at the time, so the browser could not fetch the
-response to display. The settlement itself was verified by validators
-(RESPONSE_VALID, required fields present); the display feature is
-implemented and works when the API is available.
+leader SUCCESS. The loop is called C8 (on-chain call_id 7 on this
+contract); the label continues the browser-loop sequence from
+v1.2, whose browser call was C7. Its settlement wrote a
+settlement-time snapshot into the call record (temperature_2m,
+time, wind_speed_10m), verified by consensus; the receipt shows
+that snapshot read from the chain and never re-fetches the
+endpoint.
 
 | Label | Tx | Result |
 |-------|----|--------|
@@ -81,7 +86,7 @@ ${browserRows}
 const gen = (wei) => (Number(wei) / 1e18).toString();
 const endpointLines = endpoints.map((e) => `- E${e.endpoint_id}: settled_valid ${e.settled_valid}, violations ${e.violations}.`).join('\n');
 
-const evidence = `# EVIDENCE.md — CallSettle (protocol callsettle-1.2)
+const evidence = `# EVIDENCE.md — CallSettle (protocol callsettle-1.3)
 
 - Network: Stable Studionet, Chain ID 61999
 - Contract: [${ADDRESS}](${addrLink})
@@ -144,16 +149,20 @@ ${rows}
 ${browserSection}`;
 
 const reviewerBrowserSection = browserTxs.length === 0
-  ? `## Browser write-loop transactions (C7)
+  ? `## Browser write-loop transactions (C8)
 
 Pre-registered in EXPECTED.md; not yet run. When the browser loop
 runs, its hashes are recorded in \`docs/browser-transactions.json\`
-and re-read live by \`node scripts/verify_evidence.mjs\`.
+and re-read live by \`node scripts/verify_evidence.mjs\`. The loop
+is called C8 (on-chain call_id 7 on this contract).
 `
-  : `## Browser write-loop transactions (C7)
+  : `## Browser write-loop transactions (C8)
 
 Pre-registered in EXPECTED.md before the run; hashes also in
 \`docs/browser-transactions.json\`. All FINALIZED, re-read live.
+The loop is called C8 (on-chain call_id 7 on this contract); its
+settlement wrote a settlement-time snapshot into the call record,
+shown in the receipt read from the chain.
 
 | Label | Tx | Result |
 |-------|----|--------|
@@ -184,7 +193,7 @@ an Open-Meteo forecast URL with latitude 999, which returns HTTP 400
 ## Contract
 
 - Address: [${ADDRESS}](${addrLink})
-- Protocol: callsettle-1.2
+- Protocol: callsettle-1.3
 - Source SHA-256: \`${deployment.source_sha256}\`
 - Deploy tx: [${deployment.deploy_tx}](${EX}/tx/${deployment.deploy_tx})
 - Byte parity: \`node scripts/byte_parity.mjs\` (deployed code ==
@@ -199,7 +208,9 @@ an Open-Meteo forecast URL with latitude 999, which returns HTTP 400
    withdrawn, balance ${gen(counts.contract_balance_wei)} GEN, escrowed ${gen(counts.escrowed_wei)} GEN, violations ${counts.total_violations}.
 4. Read call 3 (\`get_call\` 3): REFUNDED / RESPONSE_INVALID,
    buyer_credit 2 GEN. Read call 4: REFUNDED / UNREACHABLE. Read
-   call 6: SETTLED / RESPONSE_VALID, provider_withdrawn true.
+   call 6: SETTLED / RESPONSE_VALID, provider_withdrawn true, with
+   a settlement-time snapshot (temperature_2m, time,
+   wind_speed_10m) whose band matches its temperature.
 
 ${reviewerBrowserSection}
 ## Evidence transactions
@@ -222,11 +233,15 @@ state unchanged after each negative.
 It does not prove an endpoint is business-correct (only that its
 response matches the single public mode); it does not prove keyed
 endpoints work; it does not prove temperature readings are accurate
-(temperature is stored only as a 10 °C band and never decides
-anything). It does not guarantee the third-party API is always
-available or that its responses stay the same over time — a later
+(temperature decides nothing: the verdict uses only the response
+shape, and the exact temperature is kept only as a settlement-time
+snapshot for display). It does not guarantee the third-party API is
+always available or that its responses stay the same over time — a later
 fetch of the same endpoint can return different weather, and a
-later call settles against whatever the response is then.
+later call settles against whatever the response is then. The
+snapshot is the record of what a settlement was based on; the
+receipt shows the snapshot read from the chain and never fetches
+the endpoint again.
 The schema_note stored at listing is provider-written text, checked
 only for length (10–280 chars); it is not verified, and the endpoint
 URL is the source of truth.

@@ -251,7 +251,7 @@ section { margin-top: 44px; }
   .stamp { animation: none; }
 }
 
-/* Verified API response (buyer sees the actual data, not just a receipt) */
+/* Settlement-time verified API snapshot (read from the chain, never re-fetched) */
 .response-box { border: 1px solid var(--rule); border-radius: 3px; padding: 10px 12px; display: grid; gap: 8px; margin-top: 10px; background: #fbfaf7; }
 .response-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
 .response-lines { display: grid; gap: 4px; font-size: 0.9rem; }

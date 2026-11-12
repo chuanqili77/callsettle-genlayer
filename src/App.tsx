@@ -59,56 +59,38 @@ function Meter({ label, value, unit, active }: { label: string; value: number; u
   );
 }
 
-// The buyer sees the ACTUAL API response data for a call, not just a
-// receipt. The browser fetches the provider's public endpoint
-// directly (Open-Meteo allows cross-origin reads) and shows the
-// fields the settlement rule checks. The note is explicit: this is
-// the response fetched NOW — validators fetched the same endpoint
-// at settlement time, and the verdict was based on that response.
-function ResponsePreview({ url, t, buttonLabel }: { url: string; t: Dict; buttonLabel: string }) {
-  const [state, setState] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
-  const [data, setData] = useState<any>(null);
-  async function fetchNow() {
-    setState('loading');
-    try {
-      const res = await fetch(url, { cache: 'no-store' });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      setData(await res.json());
-      setState('ok');
-    } catch {
-      setState('error');
-    }
-  }
-  const cur = data?.current ?? null;
+// The buyer sees the settlement-time API snapshot for a call, read
+// directly from the on-chain call record — never a fresh fetch. The
+// snapshot holds the standardized fields validators verified by
+// consensus at settlement (temperature_2m, time, wind_speed_10m).
+// A later fetch of the same endpoint can return different weather,
+// so the browser does not re-request the endpoint: what is shown
+// here is exactly the data the settlement was based on. Calls
+// whose settlement did not verify a response carry no snapshot.
+function SnapshotBox({ c, t }: { c: CallRec; t: Dict }) {
+  const s = c.snapshot;
   return (
     <div className="response-box">
       <div className="response-head">
-        <strong>{t.responseTitle}</strong>
-        {state === 'idle' && <button onClick={fetchNow}>{buttonLabel}</button>}
-        {state === 'loading' && <span>{t.responseLoading}</span>}
-        {state === 'ok' && <button onClick={() => setState('idle')}>{t.responseHide}</button>}
-        {state === 'error' && <button onClick={fetchNow}>{buttonLabel}</button>}
+        <strong>{t.snapshotTitle}</strong>
       </div>
-      {state === 'ok' && (
+      {s ? (
         <div className="response-lines">
-          {cur && typeof cur.temperature_2m === 'number' && (
-            <div><span>{t.responseTemp}</span><strong>{cur.temperature_2m} °C</strong></div>
+          <div><span>{t.responseTemp}</span><strong>{s.temperature_2m} °C</strong></div>
+          <div><span>{t.responseTime}</span><strong className="mono">{s.time}</strong></div>
+          {typeof s.wind_speed_10m === 'number' && (
+            <div><span>{t.responseWind}</span><strong>{s.wind_speed_10m} km/h</strong></div>
           )}
-          {cur && typeof cur.time === 'string' && (
-            <div><span>{t.responseTime}</span><strong className="mono">{cur.time}</strong></div>
-          )}
-          {cur && typeof cur.wind_speed_10m === 'number' && (
-            <div><span>{t.responseWind}</span><strong>{cur.wind_speed_10m} km/h</strong></div>
-          )}
-          {!cur && <div><span>{t.fieldsNo}</span><strong>current</strong></div>}
+          <div><span>{t.snapshotBand}</span><strong className="mono">{c.temperature_band}</strong></div>
           <details>
             <summary>{t.responseRaw}</summary>
-            <pre className="mono response-raw">{JSON.stringify(data, null, 2)}</pre>
+            <pre className="mono response-raw">{JSON.stringify(s, null, 2)}</pre>
           </details>
         </div>
+      ) : (
+        <p className="response-note">{t.snapshotNone}</p>
       )}
-      {state === 'error' && <p className="inline-error">{t.responseError}</p>}
-      <p className="response-note">{t.responseNote}</p>
+      <p className="response-note">{t.snapshotNote}</p>
     </div>
   );
 }
@@ -533,9 +515,6 @@ export default function App() {
               {busy.startsWith('call-e') ? t.sending : t.callBtn}
             </button>
             {!wallet && <p className="slip-hint">{t.connectWallet} / {t.useTemp}</p>}
-            {selEndpoint && (
-              <ResponsePreview url={selEndpoint.url} t={t} buttonLabel={t.responsePreview} />
-            )}
           </div>
         </section>
 
@@ -626,10 +605,7 @@ export default function App() {
                           </div>
                         ))
                       )}
-                      {(() => {
-                        const ep = endpoints.find((e) => e.endpoint_id === c.endpoint_id);
-                        return ep ? <ResponsePreview url={ep.url} t={t} buttonLabel={t.responseShow} /> : null;
-                      })()}
+                      <SnapshotBox c={c} t={t} />
                       <p>{t.receipt} #{c.call_id} — {t.readbackOk}: {readbackOk ? fmtReadbackTime(rb!.at) : t.unconfirmed}</p>
                       {(myProviderCredit || myBuyerCredit) && (
                         <div className="withdraw-block">

@@ -1,13 +1,23 @@
-# EXPECTED.md — CallSettle evidence v1.2, pre-registered before the run
+# EXPECTED.md — CallSettle evidence v1.3, pre-registered before the run
 
-Protocol callsettle-1.2. Written 2026-11-12, before any v1.2 evidence
+Protocol callsettle-1.3. Written 2026-11-12, before any v1.3 evidence
 transaction was sent. Every case below lists its expected on-chain
 outcome; the run aborts if a result differs. Temperature bands are
 NOT pre-registered (a band flip at a boundary only produces a
 consensus disagreement and a retry); only the verdict is
-pre-registered for each settlement.
+pre-registered for each settlement. For RESPONSE_VALID settlements
+the call record must also carry a settlement-time snapshot
+(temperature_2m, time, wind_speed_10m) whose band is derived from
+its temperature; other verdicts carry snapshot null.
 
-v1.2 is a single-mode market: every listed endpoint is an Open-Meteo
+CallSettle is consensus-verified pay-per-call API settlement: a
+buyer escrows the fee for one call, validators independently fetch
+the public endpoint's response, and consensus decides whether the
+provider is paid, the buyer is refunded, or a violation is recorded.
+Open-Meteo is only the demo data source; the project claims no
+exclusive API data and no commercial data license.
+
+v1.3 is a single-mode market: every listed endpoint is an Open-Meteo
 forecast endpoint (list_endpoint rejects any URL that is not exactly
 the forecast path `https://api.open-meteo.com/v1/forecast`,
 optionally followed by a query string, error URL_HOST).
@@ -18,19 +28,30 @@ per-endpoint settlement rule, and is never fed into consensus. The
 note itself is provider-written text, checked only for length
 (10–280 chars); it is not verified, and the endpoint URL is the
 source of truth.
-v1.1 (contract 0x58c71cDA976912e9F16438317dE7804523EFaEe6, protocol
-callsettle-1.1) is superseded and abandoned; its EXPECTED.md,
-EVIDENCE.md, REVIEWER.md, transactions.json and deployment.json are
-archived in evidence/v1.1/. v1.1's final state was 18 GEN in, 15 GEN
-withdrawn, 3 GEN balance — the 3 GEN is a provider credit to P1
-whose evidence-run temporary key was deleted, so it is
-unrecoverable in practice. That is disclosed here, not hidden.
-The first v1.2 deployment (contract
-0xF183E90Ea3C2Af4DcD54eeB6a2595732A80AC9e8, same source) was also
-abandoned: its evidence run stalled on a network-level stuck
-transaction (see evidence/v1.2-first-deploy/NOTES.md). The live
-v1.2 deployment is a fresh deploy of the identical source.
-v1.0 is archived in evidence/v1/.
+v1.2 (contract 0x0ae3DeB61fA3f84FA15EA164a9B0F2E59469e265, protocol
+callsettle-1.2) is superseded and abandoned; its EXPECTED.md,
+EVIDENCE.md, REVIEWER.md, transactions.json, deployment.json and
+browser-transactions.json are archived in evidence/v1.2/. v1.2's
+final state was 18 GEN in, 18 GEN withdrawn, 0 GEN balance. v1.1
+and v1.0 are archived in evidence/v1.1/ and evidence/v1/.
+
+Expected vs actual, carried over from v1.2: the v1.2 browser loop
+pre-registered a London endpoint, but the loop actually listed a
+Paris endpoint (same public mode, same 2 GEN price). The v1.2
+record keeps that distinction. For v1.3 the browser loop below
+pre-registers Paris directly, so the expected endpoint is the one
+the loop is to list.
+
+History that motivated v1.3: on 2026-11-12 the v1.2 browser receipt
+showed the API response by re-fetching Open-Meteo from the browser,
+and the fetch failed — the browser's shared network returned HTTP
+429 ("Daily API request limit exceeded") for both the Paris and the
+Berlin endpoint, while the same addresses returned data from other
+networks. Settlement was not affected: the validators had fetched a
+valid response minutes earlier (RESPONSE_VALID, required fields
+present). v1.3 removes the re-fetch: the settlement-time snapshot
+is written into the call record by consensus and the receipt shows
+that snapshot read from the chain.
 
 Endpoints (provider P1 lists all three):
 | ID | URL | Price | Expected |
@@ -42,12 +63,12 @@ Endpoints (provider P1 lists all three):
 Calls (each call_api escrows the exact price):
 | ID | Buyer | Endpoint | Price | Expected settlement |
 |----|-------|----------|-------|---------------------|
-| C1 | B1 | E1 | 3 GEN | RESPONSE_VALID, status SETTLED, provider_credit 3 GEN, buyer_credit 0. Settled by OUT (anyone may settle). |
-| C2 | B2 | E1 | 3 GEN | RESPONSE_VALID, status SETTLED, provider_credit 3 GEN, buyer_credit 0. Settled by OUT. |
-| C3 | B1 | E2 | 2 GEN | RESPONSE_INVALID, status REFUNDED, buyer_credit 2 GEN, provider_credit 0, E2 violations 1. Settled by OUT. |
-| C4 | B2 | E3 | 2 GEN | UNREACHABLE, status REFUNDED, buyer_credit 2 GEN, provider_credit 0, E3 violations 0. Settled by OUT. |
-| C5 | B1 | E1 | 3 GEN | Cancelled by buyer while FUNDED: status CANCELLED, buyer_credit 3 GEN, verdict empty. |
-| C6 | B1 | E1 | 3 GEN | RESPONSE_VALID, status SETTLED, provider_credit 3 GEN, buyer_credit 0. Settled by OUT. The provider credit is withdrawn inside the scripted run (c6-provider-withdraw), so the scripted ledger closes at balance 0. |
+| C1 | B1 | E1 | 3 GEN | RESPONSE_VALID, status SETTLED, provider_credit 3 GEN, buyer_credit 0. Settled by OUT (anyone may settle). Snapshot present: temperature_2m a number in -60..60, time a valid ISO string, wind_speed_10m a non-negative number or null, band derived from the snapshot temperature. |
+| C2 | B2 | E1 | 3 GEN | RESPONSE_VALID, status SETTLED, provider_credit 3 GEN, buyer_credit 0. Settled by OUT. Snapshot present, same shape as C1. |
+| C3 | B1 | E2 | 2 GEN | RESPONSE_INVALID, status REFUNDED, buyer_credit 2 GEN, provider_credit 0, E2 violations 1. Settled by OUT. Snapshot null. |
+| C4 | B2 | E3 | 2 GEN | UNREACHABLE, status REFUNDED, buyer_credit 2 GEN, provider_credit 0, E3 violations 0. Settled by OUT. Snapshot null. |
+| C5 | B1 | E1 | 3 GEN | Cancelled by buyer while FUNDED: status CANCELLED, buyer_credit 3 GEN, verdict empty. Snapshot null. |
+| C6 | B1 | E1 | 3 GEN | RESPONSE_VALID, status SETTLED, provider_credit 3 GEN, buyer_credit 0. Settled by OUT. Snapshot present, same shape as C1. The provider credit is withdrawn inside the scripted run (c6-provider-withdraw), so the scripted ledger closes at balance 0. |
 
 Withdrawals (pull-payment, one per entitled party per call):
 | Call | Withdrawer | Expected |
@@ -62,7 +83,7 @@ Withdrawals (pull-payment, one per entitled party per call):
 Negatives (each must be a FINALIZED transaction with MAJORITY_AGREE
 and the exact leader error payload below; state must not change,
 contract balance must not change — every failed-payable negative in
-v1.2 sends 0 GEN, so no value can be stranded):
+v1.3 sends 0 GEN, so no value can be stranded):
 | Label | Action | Expected error |
 |-------|--------|----------------|
 | neg0 | OUT cancels C5 (not the buyer) while FUNDED | ONLY_BUYER_CAN_CANCEL |
@@ -82,9 +103,35 @@ Final ledger, scripted run (exact):
 - Contract balance 0 GEN, escrow 0, total violations 1 (E2 only)
 - E1: settled_valid 3, violations 0. E2: settled_valid 0, violations 1. E3: settled_valid 0, violations 0.
 - has_required_fields is true exactly for VALID calls (C1, C2, C6); false for C3, C4, C5.
+- Snapshots: present exactly for C1, C2, C6 (band matches the snapshot temperature); null for C3, C4, C5.
 - Call count 6, endpoint count 3.
 
-## Browser write-loop C7 (pre-registered before the browser run)
+## Abandoned first v1.3 deploy (recorded after the fact)
+
+The first v1.3 contract, `0x2992e9f69e8aAfBCB0E25AD1B433B3b31C0a7eAf`
+(deploy tx `0xaa09cbfa2d1f33da4436a6ad7ff018edbeb171e71c7547fe1ba69ba0c659a518`),
+was abandoned before any evidence was completed on it. Its settle
+crashed: the settle of C1
+(`0xc407c7921de85550d6a00ac7690e110895f89c926092dd52d774b01c3e62ce9c`)
+reached FINALIZED with result 7, leader ERROR, payload `exit_code 1`,
+and every voting validator also reported `exit_code 1` / disagree.
+Cause: the non-deterministic consensus result carried a nested
+snapshot dict containing floats, which the consensus layer cannot
+encode. The pure logic was correct in isolation (mock tests and a
+local stub pass). The fix, in the redeployed v1.3 contract, carries
+the snapshot through consensus as flat integer fields only
+(temperature and wind in tenths, time as a string); settle_call
+divides by 10 when it writes the stored snapshot, so get_call still
+reads the real values. No transaction from the abandoned deploy is
+used as evidence for the redeployed contract. Close-out of the
+abandoned deploy (details in `evidence/v1.3-first-deploy/NOTES.md`):
+C1 cancelled
+(`0x7a57eaa776b2467b71f18fc97587231d810e1b62634d06a8cafdf031f70a0774`),
+buyer withdrew the 3 GEN refund
+(`0xb1a8f39c576c4f00c93156023a27b6c21faa1811706ad318d9176718c544b033`),
+final contract balance 0 GEN, 3 GEN in = 3 GEN out.
+
+## Browser write-loop C8 (pre-registered before the browser run)
 
 After the scripted evidence run, one more endpoint and call are made
 through the live site in a real browser, with the site's own
@@ -96,39 +143,30 @@ temporary test account that is BOTH provider and buyer (the contract
 has no guard against buyer == provider, and this is what makes an
 in-browser provider withdrawal testable).
 
+The loop is called C8: it continues the browser-loop sequence from
+v1.2, whose browser call was C7. Its on-chain call_id on the v1.3
+contract is 7, and its transaction labels use that id (c7-call,
+c7-settle, c7-provider-withdraw), so the receipt links them.
+
 | Step | Expected |
 |------|----------|
-| E4 listed by the browser temp account | URL https://api.open-meteo.com/v1/forecast?latitude=48.85&longitude=2.35&current=temperature_2m,wind_speed_10m&timezone=Europe%2FParis, price 2 GEN, ACTIVE. Temp account address recorded after. (Actual: the loop listed Paris; the pre-registration named London — same public mode, same price.) |
-| C7: same temp account buys one call on E4 | 2 GEN escrowed, call id 7, FUNDED, then FINALIZED. |
-| C7 settled from the site | RESPONSE_VALID, status SETTLED, provider_credit 2 GEN, buyer_credit 0. |
-| C7 provider credit withdrawn from the site | The receipt shows the explicit “Withdraw provider credit · 2 GEN” button (temp account is the provider), pressed in the browser, FINALIZED + SUCCESS, receipt shows Withdrawn · 2 GEN. |
+| E4 listed by the browser temp account | URL https://api.open-meteo.com/v1/forecast?latitude=48.85&longitude=2.35&current=temperature_2m,wind_speed_10m&timezone=Europe%2FParis, price 2 GEN, ACTIVE. Temp account address recorded after. (Expected: Paris. The v1.2 loop pre-registered London and actually listed Paris; v1.3 pre-registers the Paris endpoint that is to be listed.) |
+| C8: same temp account buys one call on E4 | 2 GEN escrowed, on-chain call id 7, FUNDED, then FINALIZED. |
+| C8 settled from the site | RESPONSE_VALID, status SETTLED, provider_credit 2 GEN, buyer_credit 0. A settlement-time snapshot is written into the call record: temperature_2m a number in -60..60, time a valid ISO string, wind_speed_10m a non-negative number or null, band derived from the snapshot temperature. If the validators cannot fetch the endpoint (for example the free-tier daily limit is exhausted), the settlement is UNREACHABLE — that is a real outcome, recorded as such, and the loop is retried after the API recovers; no result is invented. |
+| C8 receipt shows the settlement-time snapshot | The receipt displays "Settlement-time verified API snapshot" with the snapshot fields read from the chain (temperature, time, wind speed, band). It never re-fetches the endpoint, so the display does not depend on the browser's network. |
+| C8 provider credit withdrawn from the site | The receipt shows the explicit “Withdraw provider credit · 2 GEN” button (temp account is the provider), pressed in the browser, FINALIZED + SUCCESS, receipt shows Withdrawn · 2 GEN. |
 
-Ledger after C7 (exact):
+Ledger after C8 (exact):
 - GEN in: 16 + 2 = 18 GEN
 - GEN out: provider 9 + 2 = 11 GEN; buyer 7 GEN; total 18 GEN
 - Contract balance 0 GEN, escrow 0, total violations 1 (E2 only)
 - E1: settled_valid 3, violations 0. E4: settled_valid 1, violations 0. Call count 7, endpoint count 4.
 
-Actual (2026-11-12): all four browser transactions FINALIZED
-(list 0x912146280dc37b10911287978ee42a9e4f53aaa9ea8d1b7f180002c33e5236af,
-call 0xcc68994224862590245e29bff854f5ed7abe324f87515cee15f4e952ab9f4549,
-settle 0x142461c216015d68ccbd29d2d655ec31364e55a8a623763c76344bec9197b262,
-withdraw 0x9a9d7652927767054e82a944357d771531ae0d41f7957967e2490bd3bae7b854),
-temp account 0xebe057fdd4dbe105dba26706ad079089cb502574, call #7 SETTLED
-RESPONSE_VALID, band 0_10, provider credit withdrawn. Final ledger
-18 in = 18 out, balance 0. Note: the receipt's "Show the API response
-for this call" button failed in this run — Open-Meteo's free-tier
-daily request limit was exhausted at the time, so the browser could
-not fetch the response to display (the validators had fetched it
-successfully minutes earlier during settlement). The display feature
-is implemented; the failure was upstream and transient, and is
-recorded here as a known limit.
+## Honest note on failed payables (v1.3)
 
-## Honest note on failed payables (v1.2)
-
-The v1.2 contract docstring states the truth: a failed payable call
+The v1.3 contract docstring states the truth: a failed payable call
 KEEPS its value in the contract on Studionet — a failed payable is
-not refunded. The v1.2 evidence run is designed so no failed
+not refunded. The v1.3 evidence run is designed so no failed
 payable ever carries value: neg2 and neg8 both send 0 GEN, and the
 frontend only submits the exact price to an existing ACTIVE
 endpoint. Final scripted contract balance is 0 GEN, and the final
@@ -144,4 +182,6 @@ settlement time matches the single public mode. It does not
 guarantee the third-party API is always available, and it does not
 guarantee its responses stay the same over time — a later fetch of
 the same endpoint can return different weather, and a later call
-settles against whatever the response is then.
+settles against whatever the response is then. The settlement-time
+snapshot is the record of what a settlement was based on; the
+receipt shows that snapshot read from the chain.

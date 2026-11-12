@@ -39,10 +39,14 @@ export interface EndpointRec {
   price_wei: number; schema_note: string; status: string; calls: number;
   settled_valid: number; violations: number;
 }
+export interface CallSnapshot {
+  temperature_2m: number; time: string; wind_speed_10m: number | null;
+}
 export interface CallRec {
   call_id: number; endpoint_id: number; buyer: string; provider: string;
   price_gen: number; price_wei: number; status: string; verdict: string;
-  temperature_band: string; has_required_fields: boolean;
+  temperature_band: string; snapshot: CallSnapshot | null;
+  has_required_fields: boolean;
   buyer_credit: number; provider_credit: number;
   buyer_withdrawn: boolean; provider_withdrawn: boolean;
 }

@@ -2,11 +2,15 @@
 // evidence/transactions.json AND (when the browser loop has run)
 // docs/browser-transactions.json live from Studionet, and re-checks
 // the final readback against EXPECTED.md. Exact comparisons only: no
-// substring matching, and a MAJORITY_DISAGREE is never counted as PASS.
-// The scripted checks (calls 1-6, endpoints 1-3, 16 GEN in = 16 out,
-// balance 0) must pass WITHOUT the browser loop; the browser section
-// runs only when docs/browser-transactions.json actually lists txs,
-// and then also checks the final 18 GEN in = 18 out, balance 0.
+// substring matching. A MAJORITY_DISAGREE is a fail-closed retry, not
+// a pass: disagreed-retry records are verified but never counted in
+// the PASS tally. Every transaction is also checked to have been sent
+// to the current contract address. The scripted checks (calls 1-6,
+// endpoints 1-3, 16 GEN in = 16 out, balance 0) must pass WITHOUT the
+// browser loop; the browser section runs only when
+// docs/browser-transactions.json actually lists txs, and then also
+// checks the final 18 GEN in = 18 out, balance 0, plus the C8
+// settlement-time snapshot.
 // Usage: node scripts/verify_evidence.mjs
 import fs from 'node:fs';
 import path from 'node:path';
@@ -30,6 +34,38 @@ const failures = [];
 function ok(name, cond, extra = '') {
   if (cond) { pass++; console.log('PASS', name); }
   else { fail++; failures.push(name); console.log('FAIL', name, extra); }
+}
+// INFO lines are verified facts that are NOT counted as PASS: a
+// fail-closed MAJORITY_DISAGREE retry is recorded, never a pass.
+function note(name) { console.log('INFO', name); }
+function bandOf(temp) {
+  if (temp < 0) return 'LT0';
+  if (temp < 10) return '0_10';
+  if (temp < 20) return '10_20';
+  if (temp < 30) return '20_30';
+  return 'GT30';
+}
+function snapshotGood(c) {
+  // A settlement-time snapshot exists exactly for RESPONSE_VALID
+  // calls, its band is derived from its temperature, and its time is
+  // a valid ISO time within 48 hours before now.
+  const s = c.snapshot;
+  if (c.verdict === 'RESPONSE_VALID') {
+    if (!s || typeof s !== 'object') return false;
+    const temp = s.temperature_2m;
+    const tstr = s.time;
+    const wind = s.wind_speed_10m;
+    if (typeof temp !== 'number' || temp < -60 || temp > 60) return false;
+    if (typeof tstr !== 'string' || !tstr) return false;
+    if (wind !== null && wind !== undefined && (typeof wind !== 'number' || wind < 0)) return false;
+    if (bandOf(temp) !== c.temperature_band) return false;
+    const t = Date.parse(tstr);
+    if (Number.isNaN(t)) return false;
+    const ageMs = Date.now() - t;
+    if (ageMs < -3600 * 1000 || ageMs > 48 * 3600 * 1000) return false;
+    return true;
+  }
+  return s === null || s === undefined;
 }
 function leaderReceipt(tx) {
   let r = tx?.consensus_data?.leader_receipt;
@@ -77,6 +113,10 @@ async function checkTxRecord(rec, where) {
   const finalized = [7, 'FINALIZED'].includes(tx.status);
   const agreed = [6, 'MAJORITY_AGREE'].includes(tx.result);
   const leader = leaderReceipt(tx);
+  // Every recorded transaction must have been sent to the current
+  // contract: a hash from a superseded deployment must never pass.
+  const to = String(tx.to_address || tx.to || tx.transaction?.to || tx.transaction?.to_address || '').toLowerCase();
+  ok(`tx ${where}:${rec.label} sent to the current contract`, to === ADDRESS.toLowerCase(), `to=${to}`);
   if (rec.result === 'ok') {
     ok(`tx ${where}:${rec.label} FINALIZED+AGREE+SUCCESS`, finalized && agreed && leader?.execution_result === 'SUCCESS',
       `status=${tx.status} result=${tx.result} leader=${leader?.execution_result}`);
@@ -89,8 +129,13 @@ async function checkTxRecord(rec, where) {
       finalized && agreed && leader?.execution_result === 'ERROR' && payload === EXPECTED_ERROR[rec.label],
       `status=${tx.status} result=${tx.result} leader=${leader?.execution_result} payload=${payload}`);
   } else if (rec.result === 'disagreed-retry') {
-    ok(`tx ${where}:${rec.label} is a recorded MAJORITY_DISAGREE retry (fail-closed, not a pass)`,
-      [5, 'MAJORITY_DISAGREE'].includes(tx.result));
+    // Verified but NOT counted as a pass: the disagreement left the
+    // call FUNDED (fail-closed) and the settlement was retried.
+    if ([5, 'MAJORITY_DISAGREE'].includes(tx.result)) {
+      note(`tx ${where}:${rec.label} is a recorded MAJORITY_DISAGREE retry (fail-closed, not counted as PASS)`);
+    } else {
+      ok(`tx ${where}:${rec.label} is a recorded MAJORITY_DISAGREE retry`, false, `result=${tx.result}`);
+    }
   } else {
     ok(`tx ${where}:${rec.label} has a known result kind`, false, rec.result);
   }
@@ -128,6 +173,8 @@ for (const [id, e] of Object.entries(expectCalls)) {
   ok(`call ${id} temperature_band is a band string, never a float`,
     typeof c.temperature_band === 'string' && ['LT0', '0_10', '10_20', '20_30', 'GT30', 'NONE', ''].includes(c.temperature_band),
     c.temperature_band);
+  ok(`call ${id} settlement-time snapshot is consistent with its verdict and band`,
+    snapshotGood(c), JSON.stringify(c.snapshot));
 }
 const e1 = await read('get_endpoint', [1]);
 const e2 = await read('get_endpoint', [2]);
@@ -147,7 +194,7 @@ if (browserTxs.length === 0) {
 } else {
   console.log('counts/ledger (scripted): superseded by the post-browser checks in section 4');
 }
-ok('protocol is callsettle-1.2', (await reader.readContract({address: ADDRESS, functionName: 'get_protocol', args: [], transactionHashVariant: 'latest-final'})) === 'callsettle-1.2');
+ok('protocol is callsettle-1.3', (await reader.readContract({address: ADDRESS, functionName: 'get_protocol', args: [], transactionHashVariant: 'latest-final'})) === 'callsettle-1.3');
 
 // 4. Browser write loop (only when it has actually run; the file was
 // loaded before section 3).
@@ -159,20 +206,25 @@ if (browserTxs.length === 0) {
   const byLabel = {};
   for (const rec of browserTxs) byLabel[rec.label] = rec;
   for (const rec of browserTxs) await checkTxRecord(rec, 'browser');
-  // Each browser settle must match the call's on-chain verdict; each
-  // browser withdraw must match the call's withdrawn flag.
+  // The browser loop is called C8 in the evidence (it continues the
+  // browser-loop sequence from v1.2's C7); its on-chain call_id on
+  // this contract is 7, and its tx labels use that id (c7-*), so the
+  // receipt links them. The mapping is explicit, never guessed.
+  const BROWSER_CALL_ID = 7;
   for (const rec of browserTxs) {
-    const m = rec.label.match(/^c(\d+)-(settle|provider-withdraw|buyer-withdraw)$/);
+    const m = rec.label.match(/^c7-(settle|provider-withdraw|buyer-withdraw)$/);
     if (!m) continue;
-    const call = await read('get_call', [Number(m[1])]);
-    if (m[2] === 'settle' && rec.verdict) {
+    const call = await read('get_call', [BROWSER_CALL_ID]);
+    if (m[1] === 'settle' && rec.verdict) {
       ok(`browser ${rec.label}: on-chain verdict == recorded ${rec.verdict}`,
         call.verdict === rec.verdict, JSON.stringify(call));
+      ok(`browser ${rec.label}: settlement-time snapshot is consistent`,
+        snapshotGood(call), JSON.stringify(call.snapshot));
     }
-    if (m[2] === 'provider-withdraw') {
+    if (m[1] === 'provider-withdraw') {
       ok(`browser ${rec.label}: provider credit withdrawn on-chain`, call.provider_withdrawn === true, JSON.stringify(call));
     }
-    if (m[2] === 'buyer-withdraw') {
+    if (m[1] === 'buyer-withdraw') {
       ok(`browser ${rec.label}: buyer credit withdrawn on-chain`, call.buyer_withdrawn === true, JSON.stringify(call));
     }
   }
@@ -184,11 +236,13 @@ if (browserTxs.length === 0) {
       JSON.stringify(e4));
   }
   if (byLabel['c7-settle']) {
-    const c7 = await read('get_call', [7]);
-    ok('call 7 readback == EXPECTED.md (browser loop)',
-      c7.status === 'SETTLED' && c7.verdict === 'RESPONSE_VALID'
-      && c7.provider_credit === 2000000000000000000 && c7.buyer_credit === 0 && c7.has_required_fields === true,
-      JSON.stringify(c7));
+    const c8 = await read('get_call', [BROWSER_CALL_ID]);
+    ok('C8 (call 7) readback == EXPECTED.md (browser loop)',
+      c8.status === 'SETTLED' && c8.verdict === 'RESPONSE_VALID'
+      && c8.provider_credit === 2000000000000000000 && c8.buyer_credit === 0 && c8.has_required_fields === true,
+      JSON.stringify(c8));
+    ok('C8 (call 7) settlement-time snapshot is consistent',
+      snapshotGood(c8), JSON.stringify(c8.snapshot));
   }
   if (byLabel['c7-provider-withdraw']) {
     const counts2 = await read('get_counts', []);
