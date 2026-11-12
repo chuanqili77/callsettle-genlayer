@@ -18,6 +18,7 @@ import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 import {createClient} from 'genlayer-js';
 import {studionet} from 'genlayer-js/chains';
+import {snapshotGood} from './snapshot_validation.mjs';
 
 const RPC_URL = 'https://studio.genlayer.com/api';
 const CHAIN_ID = 61999;
@@ -38,44 +39,6 @@ function ok(name, cond, extra = '') {
 // INFO lines are verified facts that are NOT counted as PASS: a
 // fail-closed MAJORITY_DISAGREE retry is recorded, never a pass.
 function note(name) { console.log('INFO', name); }
-function bandOf(temp) {
-  if (temp < 0) return 'LT0';
-  if (temp < 10) return '0_10';
-  if (temp < 20) return '10_20';
-  if (temp < 30) return '20_30';
-  return 'GT30';
-}
-function validLocalApiTime(value) {
-  // Open-Meteo returns local wall time without an offset when a named
-  // timezone is requested. Validate the calendar fields without using
-  // Date.parse(), which would silently apply the verifier machine's TZ.
-  if (typeof value !== 'string') return false;
-  const m = value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/);
-  if (!m) return false;
-  const [, ys, mos, ds, hs, mis, ss = '0'] = m;
-  const y = Number(ys), mo = Number(mos), d = Number(ds);
-  const h = Number(hs), mi = Number(mis), sec = Number(ss);
-  if (mo < 1 || mo > 12 || h > 23 || mi > 59 || sec > 59) return false;
-  const days = new Date(Date.UTC(y, mo, 0)).getUTCDate();
-  return d >= 1 && d <= days;
-}
-function snapshotGood(c) {
-  // Historical snapshots remain verifiable indefinitely. Their source
-  // time is a timezone-local API value, not a verifier wall-clock age.
-  const s = c.snapshot;
-  if (c.verdict === 'RESPONSE_VALID') {
-    if (!s || typeof s !== 'object') return false;
-    const temp = s.temperature_2m;
-    const tstr = s.time;
-    const wind = s.wind_speed_10m;
-    if (typeof temp !== 'number' || !Number.isFinite(temp) || temp < -60 || temp > 60) return false;
-    if (!validLocalApiTime(tstr)) return false;
-    if (wind !== null && wind !== undefined && (typeof wind !== 'number' || !Number.isFinite(wind) || wind < 0)) return false;
-    if (bandOf(temp) !== c.temperature_band) return false;
-    return true;
-  }
-  return s === null || s === undefined;
-}
 function leaderReceipt(tx) {
   let r = tx?.consensus_data?.leader_receipt;
   if (Array.isArray(r)) r = r.find((x) => x.mode === 'leader');
@@ -165,6 +128,13 @@ const browserTxs = Array.isArray(browser?.transactions) ? browser.transactions :
 // 3. Scripted final readback vs EXPECTED.md (latest-final reads).
 // These must pass on the scripted run alone, before any browser loop.
 const read = async (fn, args) => JSON.parse(await reader.readContract({address: ADDRESS, functionName: fn, args, transactionHashVariant: 'latest-final'}));
+const chainEndpoints = await read('get_all_endpoints', []);
+const endpointById = new Map(chainEndpoints.map((endpoint) => [Number(endpoint.endpoint_id), endpoint]));
+ok('latest-final endpoint readback supplies timezone for every endpoint',
+  chainEndpoints.length >= 3 && chainEndpoints.every((endpoint) => {
+    try { return Boolean(new URL(endpoint.url).searchParams.get('timezone')); }
+    catch { return false; }
+  }), JSON.stringify(chainEndpoints.map((endpoint) => ({id: endpoint.endpoint_id, url: endpoint.url}))));
 const expectCalls = {
   1: {status: 'SETTLED', verdict: 'RESPONSE_VALID', provider_credit: 3000000000000000000, buyer_credit: 0, has_required_fields: true},
   2: {status: 'SETTLED', verdict: 'RESPONSE_VALID', provider_credit: 3000000000000000000, buyer_credit: 0, has_required_fields: true},
@@ -183,7 +153,7 @@ for (const [id, e] of Object.entries(expectCalls)) {
     typeof c.temperature_band === 'string' && ['LT0', '0_10', '10_20', '20_30', 'GT30', 'NONE', ''].includes(c.temperature_band),
     c.temperature_band);
   ok(`call ${id} settlement-time snapshot is consistent with its verdict and band`,
-    snapshotGood(c), JSON.stringify(c.snapshot));
+    snapshotGood(c, endpointById.get(Number(c.endpoint_id))), JSON.stringify({snapshot: c.snapshot, endpoint: endpointById.get(Number(c.endpoint_id))?.url}));
 }
 const e1 = await read('get_endpoint', [1]);
 const e2 = await read('get_endpoint', [2]);
@@ -228,7 +198,7 @@ if (browserTxs.length === 0) {
       ok(`browser ${rec.label}: on-chain verdict == recorded ${rec.verdict}`,
         call.verdict === rec.verdict, JSON.stringify(call));
       ok(`browser ${rec.label}: settlement-time snapshot is consistent`,
-        snapshotGood(call), JSON.stringify(call.snapshot));
+        snapshotGood(call, endpointById.get(Number(call.endpoint_id))), JSON.stringify({snapshot: call.snapshot, endpoint: endpointById.get(Number(call.endpoint_id))?.url}));
     }
     if (m[1] === 'provider-withdraw') {
       ok(`browser ${rec.label}: provider credit withdrawn on-chain`, call.provider_withdrawn === true, JSON.stringify(call));
@@ -251,7 +221,7 @@ if (browserTxs.length === 0) {
       && c8.provider_credit === 2000000000000000000 && c8.buyer_credit === 0 && c8.has_required_fields === true,
       JSON.stringify(c8));
     ok('C8 (call 7) settlement-time snapshot is consistent',
-      snapshotGood(c8), JSON.stringify(c8.snapshot));
+      snapshotGood(c8, endpointById.get(Number(c8.endpoint_id))), JSON.stringify({snapshot: c8.snapshot, endpoint: endpointById.get(Number(c8.endpoint_id))?.url}));
   }
   if (byLabel['c7-provider-withdraw']) {
     const counts2 = await read('get_counts', []);
