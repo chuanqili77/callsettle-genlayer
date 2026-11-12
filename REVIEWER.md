@@ -33,7 +33,7 @@ an Open-Meteo forecast URL with latitude 999, which returns HTTP 400
 1. Open the contract address above in the explorer; confirm the deploy
    tx hash matches.
 2. Pick any tx hash in the table below; confirm it is FINALIZED.
-3. Read the contract's `get_counts` (latest-final): 16 GEN in, 16 GEN
+3. Read the contract's `get_counts` (latest-final): 18 GEN in, 18 GEN
    withdrawn, balance 0 GEN, escrowed 0 GEN, violations 1.
 4. Read call 3 (`get_call` 3): REFUNDED / RESPONSE_INVALID,
    buyer_credit 2 GEN. Read call 4: REFUNDED / UNREACHABLE. Read
@@ -43,10 +43,18 @@ an Open-Meteo forecast URL with latitude 999, which returns HTTP 400
 
 ## Browser write-loop transactions (C8)
 
-Pre-registered in EXPECTED.md; not yet run. When the browser loop
-runs, its hashes are recorded in `docs/browser-transactions.json`
-and re-read live by `node scripts/verify_evidence.mjs`. The loop
-is called C8 (on-chain call_id 7 on this contract).
+Pre-registered in EXPECTED.md before the run; hashes also in
+`docs/browser-transactions.json`. All FINALIZED, re-read live.
+The loop is called C8 (on-chain call_id 7 on this contract); its
+settlement wrote a settlement-time snapshot into the call record,
+shown in the receipt read from the chain.
+
+| Label | Tx | Result |
+|-------|----|--------|
+| e4-list | [0x35524e98…](https://explorer-studio.genlayer.com/tx/0x35524e981cd000c2feaec8669402f998265e359edcde9d2224be692fde54f920) | ok |
+| c7-call | [0xfa98bc90…](https://explorer-studio.genlayer.com/tx/0xfa98bc90936c661ed2637b5a446906bfba21d0d7a00a3a912556998b0cd8b469) | ok |
+| c7-settle | [0x2eefeffc…](https://explorer-studio.genlayer.com/tx/0x2eefeffc14b4e4341706a129adb9a914f7748dff4b777b04f7668cbd7722f51e) | ok · verdict RESPONSE_VALID (10_20) |
+| c7-provider-withdraw | [0xb5848089…](https://explorer-studio.genlayer.com/tx/0xb5848089abc875234e55729aa288f7fc3183a48cb44604b73bf5d6c34fe52d0f) | ok |
 
 ## Evidence transactions
 
