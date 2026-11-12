@@ -57,8 +57,9 @@ expected error ENDPOINT_NOT_FOUND, but the run's state-unchanged check
 caught a real platform behavior: a FAILED payable call keeps its value
 — the contract balance rose by exactly the 3 GEN sent, while every
 contract-accounting field (received, withdrawn, escrow, calls,
-endpoints, violations) stayed identical. This matches the LinguaCourt
-finding (a failed payable stranded 21 GEN there). The 3 GEN has no
+endpoints, violations) stayed identical. This is the platform
+behavior stated in the contract docstring: a failed payable call
+keeps its value in the contract. The 3 GEN has no
 withdraw path and stays in the contract; it is disclosed in EVIDENCE.md
 rather than hidden. Adjusted final ledger: 13 GEN in = 13 GEN out
 through the contract's accounting, escrow 0, contract balance 3 GEN

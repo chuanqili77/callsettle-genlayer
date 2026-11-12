@@ -1,8 +1,7 @@
 // CallSettle: deploy contracts/callsettle.py on Stable Studionet (61999).
-// Temp accounts live ONLY in the checkpoint file:
-//   ~/workspace/build-callsettle/.callsettle-checkpoint.json
-// (workspace, NOT in the repo, mode 0600, deleted when the flow is done
-// or abandoned). No keys are written to the repo, logs, or evidence.
+// Temp accounts live ONLY in the checkpoint file (outside the repo,
+// mode 0600, deleted when the flow is done or abandoned). No keys are
+// written to the repo, logs, or evidence.
 // Usage: node scripts/deploy_studionet.mjs [--checkpoint <path>]
 import fs from 'node:fs';
 import path from 'node:path';

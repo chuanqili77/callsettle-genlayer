@@ -1,10 +1,10 @@
 # { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
 """CallSettle: pay-per-call settlement for public APIs on GenLayer Studionet.
 
-Protocol callsettle-1.1. v1 is a single-mode market: every listed
+Protocol callsettle-1.2. The market is single-mode: every listed
 endpoint is an Open-Meteo weather endpoint (list_endpoint rejects
-any URL that does not start with
-'https://api.open-meteo.com/v1/forecast'); providers compete on
+any URL that is not exactly the forecast path, optionally followed
+by a query string); providers compete on
 per-call price (1-10 GEN). A buyer pays for one call: the exact
 price is escrowed. Anyone may then trigger settlement: GenLayer
 validators each independently fetch the endpoint URL and check the
@@ -22,11 +22,11 @@ Verdicts (deterministic code, no LLM anywhere in this contract):
   UNREACHABLE      -> escrow refunds the buyer, no violation
 Settlement never moves money directly: it records a pull-payment
 credit; the entitled party withdraws it with withdraw(). A failed
-payable call KEEPS its value in the contract (platform behavior on
-Studionet: a failed payable is not refunded, as also observed on
-LinguaCourt). The frontend only ever submits the exact price to an
+payable call KEEPS its value in the contract: on Studionet a failed
+payable is not refunded, so any value sent with a call that fails
+stays in the contract. The frontend only ever submits the exact price to an
 existing ACTIVE endpoint, so that path is unreachable from the UI,
-and the v1.1 evidence run sends 0 GEN on its failed-payable
+and the v1.2 evidence run sends 0 GEN on its failed-payable
 negatives, so no value is stranded there.
 
 Temperature is a decision-free diagnostic only: it is stored as a
@@ -39,7 +39,7 @@ Capacity (checked in the contract, mathematically consistent):
   MAX_ENDPOINTS_PER_PROVIDER = 8, MAX_ENDPOINTS_TOTAL = 32.
   8 * 4 = 32: one provider filling all 8 slots never blocks another
   provider from listing, and the total cap can only be reached by at
-  least 4 providers. No TenderCourt-style capacity deadlock: the per-
+  least 4 providers. No capacity deadlock: the per-
   provider cap and the total cap are independent counts, and a full
   provider fails with a clear error instead of a stuck state.
   URL <= 256 chars, schema_note 10..280 chars.
@@ -51,8 +51,8 @@ caller. No time gates anywhere (Studionet has no clock): every
 transition is an explicit action.
 
 Known limits (neutral, product-scope):
-  * Single-mode market in v1.1: only Open-Meteo forecast endpoints
-    can be listed (URL prefix enforced in list_endpoint). An endpoint
+  * Single-mode market in v1.2: only Open-Meteo forecast endpoints
+    can be listed (URL path enforced in list_endpoint). An endpoint
     that needs an API key cannot be listed meaningfully, because
     validators fetch without credentials.
   * An endpoint has no delist action in v1: a listed endpoint stays
@@ -77,6 +77,17 @@ MIN_NOTE_CHARS = 10
 
 VERDICTS = ["RESPONSE_VALID", "RESPONSE_INVALID", "UNREACHABLE"]
 BANDS = ["LT0", "0_10", "10_20", "20_30", "GT30", "NONE"]
+
+
+def _valid_openmeteo_url(url):
+    """Strict Open-Meteo forecast gate: the URL must be exactly the
+    forecast path, optionally followed by a query string. A junk path
+    such as /v1/forecastXYZ is rejected, as is any other host."""
+    prefix = 'https://api.open-meteo.com/v1/forecast'
+    if not isinstance(url, str) or not url.startswith(prefix):
+        return False
+    rest = url[len(prefix):]
+    return rest == '' or rest.startswith('?')
 
 
 def fail(s):
@@ -262,7 +273,7 @@ class CallSettle(gl.Contract):
         url = url.strip()
         if not url.startswith('https://'):
             fail('URL_HTTPS')
-        if not url.startswith('https://api.open-meteo.com/v1/forecast'):
+        if not _valid_openmeteo_url(url):
             fail('URL_HOST')
         if not isinstance(price_gen, int) or isinstance(price_gen, bool) \
                 or not MIN_PRICE_GEN <= price_gen <= MAX_PRICE_GEN:
@@ -388,7 +399,7 @@ class CallSettle(gl.Contract):
 
     @gl.public.view
     def get_protocol(self) -> str:
-        return 'callsettle-1.1'
+        return 'callsettle-1.2'
 
     @gl.public.view
     def get_limits(self) -> str:

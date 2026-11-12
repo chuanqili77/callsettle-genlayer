@@ -59,6 +59,70 @@ function Meter({ label, value, unit, active }: { label: string; value: number; u
   );
 }
 
+// The buyer sees the ACTUAL API response data for a call, not just a
+// receipt. The browser fetches the provider's public endpoint
+// directly (Open-Meteo allows cross-origin reads) and shows the
+// fields the settlement rule checks. The note is explicit: this is
+// the response fetched NOW — validators fetched the same endpoint
+// at settlement time, and the verdict was based on that response.
+function ResponsePreview({ url, t, buttonLabel }: { url: string; t: Dict; buttonLabel: string }) {
+  const [state, setState] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
+  const [data, setData] = useState<any>(null);
+  async function fetchNow() {
+    setState('loading');
+    try {
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      setData(await res.json());
+      setState('ok');
+    } catch {
+      setState('error');
+    }
+  }
+  const cur = data?.current ?? null;
+  return (
+    <div className="response-box">
+      <div className="response-head">
+        <strong>{t.responseTitle}</strong>
+        {state === 'idle' && <button onClick={fetchNow}>{buttonLabel}</button>}
+        {state === 'loading' && <span>{t.responseLoading}</span>}
+        {state === 'ok' && <button onClick={() => setState('idle')}>{t.responseHide}</button>}
+        {state === 'error' && <button onClick={fetchNow}>{buttonLabel}</button>}
+      </div>
+      {state === 'ok' && (
+        <div className="response-lines">
+          {cur && typeof cur.temperature_2m === 'number' && (
+            <div><span>{t.responseTemp}</span><strong>{cur.temperature_2m} °C</strong></div>
+          )}
+          {cur && typeof cur.time === 'string' && (
+            <div><span>{t.responseTime}</span><strong className="mono">{cur.time}</strong></div>
+          )}
+          {cur && typeof cur.wind_speed_10m === 'number' && (
+            <div><span>{t.responseWind}</span><strong>{cur.wind_speed_10m} km/h</strong></div>
+          )}
+          {!cur && <div><span>{t.fieldsNo}</span><strong>current</strong></div>}
+          <details>
+            <summary>{t.responseRaw}</summary>
+            <pre className="mono response-raw">{JSON.stringify(data, null, 2)}</pre>
+          </details>
+        </div>
+      )}
+      {state === 'error' && <p className="inline-error">{t.responseError}</p>}
+      <p className="response-note">{t.responseNote}</p>
+    </div>
+  );
+}
+
+// Strict Open-Meteo forecast gate, mirroring the contract:
+// exactly the forecast path, optionally followed by a query string.
+// A junk path such as /v1/forecastXYZ is rejected.
+function validOpenMeteoUrl(url: string): boolean {
+  const prefix = 'https://api.open-meteo.com/v1/forecast';
+  if (!url.startsWith(prefix)) return false;
+  const rest = url.slice(prefix.length);
+  return rest === '' || rest.startsWith('?');
+}
+
 interface Readback { endpoints: EndpointRec[]; calls: CallRec[]; counts: Counts; is_finalized_readback: boolean; at: string }
 interface EvTx { label: string; hash: string; result: string; verdict?: string; expected_error?: string }
 
@@ -420,8 +484,9 @@ export default function App() {
             <label>{t.noteLabel}
               <textarea value={listNote} onChange={(ev) => setListNote(ev.target.value)} placeholder={t.notePh} rows={3} />
             </label>
+            <p className="note-unverified">{t.noteUnverified}</p>
             <button
-              disabled={!wallet || busy !== '' || !listUrl.startsWith('https://api.open-meteo.com/v1/forecast')}
+              disabled={!wallet || busy !== '' || !validOpenMeteoUrl(listUrl.trim())}
               onClick={() => {
                 const price = Number(listPrice);
                 if (!Number.isInteger(price) || price < MIN_PRICE_GEN || price > MAX_PRICE_GEN) {
@@ -466,6 +531,9 @@ export default function App() {
               {busy.startsWith('call-e') ? t.sending : t.callBtn}
             </button>
             {!wallet && <p className="slip-hint">{t.connectWallet} / {t.useTemp}</p>}
+            {selEndpoint && (
+              <ResponsePreview url={selEndpoint.url} t={t} buttonLabel={t.responsePreview} />
+            )}
           </div>
         </section>
 
@@ -513,6 +581,9 @@ export default function App() {
                   {c.verdict && (
                     <div className={`stamp ${verdictClass(c.verdict)}`} aria-label={c.verdict}>{c.verdict}</div>
                   )}
+                  {c.verdict === 'RESPONSE_VALID' && <p className="verdict-meaning">{t.meaningValid}</p>}
+                  {c.verdict === 'RESPONSE_INVALID' && <p className="verdict-meaning">{t.meaningInvalid}</p>}
+                  {c.verdict === 'UNREACHABLE' && <p className="verdict-meaning">{t.meaningUnreachable}</p>}
                   {c.status === 'FUNDED' && (
                     <div className="stamp stamp-pending" aria-label="FUNDED">FUNDED</div>
                   )}
@@ -553,6 +624,10 @@ export default function App() {
                           </div>
                         ))
                       )}
+                      {(() => {
+                        const ep = endpoints.find((e) => e.endpoint_id === c.endpoint_id);
+                        return ep ? <ResponsePreview url={ep.url} t={t} buttonLabel={t.responseShow} /> : null;
+                      })()}
                       <p>{t.receipt} #{c.call_id} — {t.readbackOk}: {readbackOk ? fmtReadbackTime(rb!.at) : t.unconfirmed}</p>
                       {(myProviderCredit || myBuyerCredit) && (
                         <div className="withdraw-block">

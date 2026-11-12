@@ -157,8 +157,7 @@
 - Escrow: 0 GEN, total violations: 1 (endpoint E2 only)
 - Contract balance: 3 GEN — stranded by the FAILED payable neg2 (call
   to a nonexistent endpoint, 3 GEN sent). Platform behavior: a failed
-  payable call keeps its value in the contract (also observed on
-  LinguaCourt, where a failed payable stranded 21 GEN). The 3 GEN has
+  payable call keeps its value in the contract. The 3 GEN has
   no withdraw path and is disclosed here, not hidden. Testnet GEN only,
   zero cash cost.
 

@@ -1,26 +1,28 @@
-# EVIDENCE.md — CallSettle (protocol callsettle-1.1)
+# EVIDENCE.md — CallSettle (protocol callsettle-1.2)
 
 - Network: Stable Studionet, Chain ID 61999
-- Contract: [0x58c71cDA976912e9F16438317dE7804523EFaEe6](https://explorer-studio.genlayer.com/address/0x58c71cDA976912e9F16438317dE7804523EFaEe6)
-- Deploy tx: [0xeb68bda674c14e2e555cd92d372220d72b43448bcef404a17fd110da1cecf4a1](https://explorer-studio.genlayer.com/tx/0xeb68bda674c14e2e555cd92d372220d72b43448bcef404a17fd110da1cecf4a1)
-- Source: `contracts/callsettle.py` (16755 bytes)
-- Source SHA-256: `abc7fe77b13a64f705b27817b5ea9df8cc1bcd86e4c81acb5e23b3bd274f4908`
+- Contract: [0x0ae3DeB61fA3f84FA15EA164a9B0F2E59469e265](https://explorer-studio.genlayer.com/address/0x0ae3DeB61fA3f84FA15EA164a9B0F2E59469e265)
+- Deploy tx: [0xcbed0469e2410972a5529febe9ba9088c82c5aa54081e9998f0f2cccf60323eb](https://explorer-studio.genlayer.com/tx/0xcbed0469e2410972a5529febe9ba9088c82c5aa54081e9998f0f2cccf60323eb)
+- Source: `contracts/callsettle.py` (17175 bytes)
+- Source SHA-256: `3271ff330e97b64a3a2977f630beceb6cf00a70975834ea08aa90a4405973fd2`
 - Byte parity: deployed code is byte-for-byte identical to the repo source
   (`node scripts/byte_parity.mjs`).
-- Evidence run: 27 transactions recorded
-  (18 ok, 9 error-observed, 0 disagreed-retry),
-  all FINALIZED. Independent verification: `node scripts/verify_evidence.mjs`
-  re-reads every transaction live and re-checks the readback below.
+- Evidence run: 31 transactions recorded
+  (21 ok, 10 error-observed, 0 disagreed-retry),
+  all FINALIZED. Browser write loop: 0 transactions
+  recorded in `docs/browser-transactions.json`. Independent verification:
+  `node scripts/verify_evidence.mjs` re-reads every transaction live
+  and re-checks the readback below.
 - Expectations were pre-registered in EXPECTED.md before the run; every
   outcome below matched.
 
-## Final readback (latest-final)
+## Final readback (latest-final, generated from live state at 2026-11-12T07:11:02.806Z)
 
 ```json
 {
   "calls": [
     {
-      "buyer": "0xe6016ed17798cd9fa6fef2975087663b21e135f3",
+      "buyer": "0x11257bc090b9a86488979666b67639fab1a7cd6d",
       "buyer_credit": 0,
       "buyer_withdrawn": false,
       "call_id": 1,
@@ -28,7 +30,7 @@
       "has_required_fields": true,
       "price_gen": 3,
       "price_wei": 3000000000000000000,
-      "provider": "0x1535afc1f57f5bc886b98725de455df24a266238",
+      "provider": "0x39cca217905e3c4f8164d407026d0b992d33d312",
       "provider_credit": 3000000000000000000,
       "provider_withdrawn": true,
       "status": "SETTLED",
@@ -36,7 +38,7 @@
       "verdict": "RESPONSE_VALID"
     },
     {
-      "buyer": "0x1fb8eb7fe7810a3a6c20afea351960288787ac19",
+      "buyer": "0x857f9b05e5d97f314bc22baed6041e8b1ec4286c",
       "buyer_credit": 0,
       "buyer_withdrawn": false,
       "call_id": 2,
@@ -44,7 +46,7 @@
       "has_required_fields": true,
       "price_gen": 3,
       "price_wei": 3000000000000000000,
-      "provider": "0x1535afc1f57f5bc886b98725de455df24a266238",
+      "provider": "0x39cca217905e3c4f8164d407026d0b992d33d312",
       "provider_credit": 3000000000000000000,
       "provider_withdrawn": true,
       "status": "SETTLED",
@@ -52,7 +54,7 @@
       "verdict": "RESPONSE_VALID"
     },
     {
-      "buyer": "0xe6016ed17798cd9fa6fef2975087663b21e135f3",
+      "buyer": "0x11257bc090b9a86488979666b67639fab1a7cd6d",
       "buyer_credit": 2000000000000000000,
       "buyer_withdrawn": true,
       "call_id": 3,
@@ -60,7 +62,7 @@
       "has_required_fields": false,
       "price_gen": 2,
       "price_wei": 2000000000000000000,
-      "provider": "0x1535afc1f57f5bc886b98725de455df24a266238",
+      "provider": "0x39cca217905e3c4f8164d407026d0b992d33d312",
       "provider_credit": 0,
       "provider_withdrawn": false,
       "status": "REFUNDED",
@@ -68,7 +70,7 @@
       "verdict": "RESPONSE_INVALID"
     },
     {
-      "buyer": "0x1fb8eb7fe7810a3a6c20afea351960288787ac19",
+      "buyer": "0x857f9b05e5d97f314bc22baed6041e8b1ec4286c",
       "buyer_credit": 2000000000000000000,
       "buyer_withdrawn": true,
       "call_id": 4,
@@ -76,7 +78,7 @@
       "has_required_fields": false,
       "price_gen": 2,
       "price_wei": 2000000000000000000,
-      "provider": "0x1535afc1f57f5bc886b98725de455df24a266238",
+      "provider": "0x39cca217905e3c4f8164d407026d0b992d33d312",
       "provider_credit": 0,
       "provider_withdrawn": false,
       "status": "REFUNDED",
@@ -84,7 +86,7 @@
       "verdict": "UNREACHABLE"
     },
     {
-      "buyer": "0xe6016ed17798cd9fa6fef2975087663b21e135f3",
+      "buyer": "0x11257bc090b9a86488979666b67639fab1a7cd6d",
       "buyer_credit": 3000000000000000000,
       "buyer_withdrawn": true,
       "call_id": 5,
@@ -92,23 +94,39 @@
       "has_required_fields": false,
       "price_gen": 3,
       "price_wei": 3000000000000000000,
-      "provider": "0x1535afc1f57f5bc886b98725de455df24a266238",
+      "provider": "0x39cca217905e3c4f8164d407026d0b992d33d312",
       "provider_credit": 0,
       "provider_withdrawn": false,
       "status": "CANCELLED",
       "temperature_band": "",
       "verdict": ""
+    },
+    {
+      "buyer": "0x11257bc090b9a86488979666b67639fab1a7cd6d",
+      "buyer_credit": 0,
+      "buyer_withdrawn": false,
+      "call_id": 6,
+      "endpoint_id": 1,
+      "has_required_fields": true,
+      "price_gen": 3,
+      "price_wei": 3000000000000000000,
+      "provider": "0x39cca217905e3c4f8164d407026d0b992d33d312",
+      "provider_credit": 3000000000000000000,
+      "provider_withdrawn": true,
+      "status": "SETTLED",
+      "temperature_band": "0_10",
+      "verdict": "RESPONSE_VALID"
     }
   ],
   "endpoints": [
     {
-      "calls": 3,
+      "calls": 4,
       "endpoint_id": 1,
       "price_gen": 3,
       "price_wei": 3000000000000000000,
-      "provider": "0x1535afc1f57f5bc886b98725de455df24a266238",
+      "provider": "0x39cca217905e3c4f8164d407026d0b992d33d312",
       "schema_note": "Single public mode: HTTP 200, JSON, current.temperature_2m is a number in -60..60, current.time is a string. Berlin current weather, no key.",
-      "settled_valid": 2,
+      "settled_valid": 3,
       "status": "ACTIVE",
       "url": "https://api.open-meteo.com/v1/forecast?latitude=52.52&longitude=13.41&current=temperature_2m,wind_speed_10m&timezone=Europe%2FBerlin",
       "violations": 0
@@ -118,7 +136,7 @@
       "endpoint_id": 2,
       "price_gen": 2,
       "price_wei": 2000000000000000000,
-      "provider": "0x1535afc1f57f5bc886b98725de455df24a266238",
+      "provider": "0x39cca217905e3c4f8164d407026d0b992d33d312",
       "schema_note": "Single public mode (same as the good endpoint). This forecast URL returns HTTP 200 JSON without a current field, so it must settle RESPONSE_INVALID.",
       "settled_valid": 0,
       "status": "ACTIVE",
@@ -130,7 +148,7 @@
       "endpoint_id": 3,
       "price_gen": 2,
       "price_wei": 2000000000000000000,
-      "provider": "0x1535afc1f57f5bc886b98725de455df24a266238",
+      "provider": "0x39cca217905e3c4f8164d407026d0b992d33d312",
       "schema_note": "Single public mode (same as the good endpoint). This forecast URL returns HTTP 400 (latitude out of range), so it must settle UNREACHABLE.",
       "settled_valid": 0,
       "status": "ACTIVE",
@@ -139,60 +157,67 @@
     }
   ],
   "counts": {
-    "call_count": 5,
+    "call_count": 6,
     "contract_balance_wei": 0,
     "endpoint_count": 3,
     "escrowed_wei": 0,
-    "total_received_wei": 13000000000000000000,
+    "total_received_wei": 16000000000000000000,
     "total_violations": 1,
-    "total_withdrawn_wei": 13000000000000000000
+    "total_withdrawn_wei": 16000000000000000000
   }
 }
 ```
 
-## Ledger (exact)
+## Ledger (exact, computed from the live readback above)
 
-- GEN in through the contract's accounting: 13 (calls C1–C5: 3 + 3 + 2 + 2 + 3)
-- GEN out through the contract's accounting: 13 (provider 6 + buyers 7)
-- Escrow: 0 GEN, total violations: 1 (endpoint E2 only)
-- Contract balance: 0 GEN. No value stranded: every failed-payable
-  negative in v1.1 sent 0 GEN by design. (Platform behavior, stated
-  honestly in the contract docstring: a failed payable call keeps its
-  value in the contract on Studionet — v1.0 stranded 3 GEN that way,
-  which is why v1.1 negatives carry no value.) Testnet GEN only,
+- GEN in through the contract's accounting: 16
+- GEN withdrawn through the contract's accounting: 16
+- Contract balance: 0 GEN, escrowed: 0 GEN, total violations: 1
+- E1: settled_valid 3, violations 0.
+- E2: settled_valid 0, violations 1.
+- E3: settled_valid 0, violations 0.
+- Calls: 6, endpoints: 3.
+- No value stranded: every failed-payable negative sent 0 GEN by
+  design. (Platform behavior, stated honestly in the contract
+  docstring: a failed payable call keeps its value in the contract
+  on Studionet, so negatives carry no value.) Testnet GEN only,
   zero cash cost.
 
 ## Transactions
 
 | Label | Tx | Result |
 |-------|----|--------|
-| e1-list-good | [0xa3cfe81e…](https://explorer-studio.genlayer.com/tx/0xa3cfe81ebaf9959fd5293ce59eb3e85d646e2d69820b46a887d673712faec8e4) | ok |
-| e2-list-bad | [0x7b60f200…](https://explorer-studio.genlayer.com/tx/0x7b60f20040335986649b61fd3c2afa5231f39cc9731f9ea6facc321ce5e2fcf2) | ok |
-| e3-list-unreachable | [0xccfb878d…](https://explorer-studio.genlayer.com/tx/0xccfb878d1ac4f912214397c875d3d170ed013c09883121845a02d088a3d9349a) | ok |
-| c1-call | [0x2d0b37e2…](https://explorer-studio.genlayer.com/tx/0x2d0b37e2849e8b635f841ebe6b8124d8e1af720ea2b4cd4b7d413ef4fa167f92) | ok |
-| c1-settle | [0x93eceac8…](https://explorer-studio.genlayer.com/tx/0x93eceac86bf0af495398fe5a1fe02569499ea43cafa4c342f525cccaeb0574e9) | ok · verdict RESPONSE_VALID (0_10) |
-| c2-call | [0xe727fa15…](https://explorer-studio.genlayer.com/tx/0xe727fa158188bac971c135d2114a8cc3d10fe979e16849a3fd8eebf87a4fb7b6) | ok |
-| c2-settle | [0x786b0e7f…](https://explorer-studio.genlayer.com/tx/0x786b0e7f5aa6ab32ec5e562463d757a95476389722ad1e8dd485180f518fed78) | ok · verdict RESPONSE_VALID (0_10) |
-| c3-call | [0x3143f7d5…](https://explorer-studio.genlayer.com/tx/0x3143f7d500f6522c038154b593b2b93c9ba5dd21e6ae48b722e15403c1210549) | ok |
-| c3-settle | [0xafea0f3a…](https://explorer-studio.genlayer.com/tx/0xafea0f3a611365bcbe4b10cdd7c79fbc5ff4dd6e648d1c0867cc3459d9e5210b) | ok · verdict RESPONSE_INVALID (NONE) |
-| c4-call | [0x9e15df15…](https://explorer-studio.genlayer.com/tx/0x9e15df150d34286a580c3b6a9348f5b052d15a3d865907c0ce7308dbd28577e0) | ok |
-| c4-settle | [0x1816213c…](https://explorer-studio.genlayer.com/tx/0x1816213c90153d2fa322c476453f17a282af7a2825577798bd293d154b7b0003) | ok · verdict UNREACHABLE (NONE) |
-| c5-call | [0x10b87f22…](https://explorer-studio.genlayer.com/tx/0x10b87f22b223cf16743cfd4944f41a0c3e92d5c6efc56d9df48f74db277d0695) | ok |
-| neg0-stranger-cancel | [0x4db1b4bf…](https://explorer-studio.genlayer.com/tx/0x4db1b4bff2642789a329ad42e1e5140719b6799b4f08c4f9f8bfc55f2a76f6ce) | error-observed · error ONLY_BUYER_CAN_CANCEL |
-| c5-cancel | [0xd19ac4eb…](https://explorer-studio.genlayer.com/tx/0xd19ac4eb1c76737384d239e6244a13ac616602775696a079d0251a874238c6ee) | ok |
-| neg5-stranger-withdraw | [0x024dd11e…](https://explorer-studio.genlayer.com/tx/0x024dd11e6afa0f2311b24ea5a2bb4c8007f75df1d2bc0bc9c1b5923798371c69) | error-observed · error NO_CREDIT |
-| c1-provider-withdraw | [0xd5ee34a3…](https://explorer-studio.genlayer.com/tx/0xd5ee34a3cc64ff097e3200c5769243ee21063730630f77fa6a9f36ccc9b9eb22) | ok |
-| c2-provider-withdraw | [0x8a7f1fc3…](https://explorer-studio.genlayer.com/tx/0x8a7f1fc3229346388fe37a0051b58237577bcd7f2b386a94614d34303cdd658f) | ok |
-| c3-buyer-withdraw | [0xf995c33d…](https://explorer-studio.genlayer.com/tx/0xf995c33dd145680e1a77c9930abbe1127c8cd068f6d2c5b77f3da7c68fd878ad) | ok |
-| c4-buyer-withdraw | [0x05cc2344…](https://explorer-studio.genlayer.com/tx/0x05cc2344cc44ffbc2d49129d0596a8c86577d8c4c7d0e1be9cb075a2ccda6cdb) | ok |
-| c5-buyer-withdraw | [0xc2024b5a…](https://explorer-studio.genlayer.com/tx/0xc2024b5a623bb3a40b4d47d8eeace6f0e180192f60bba5cdcb2262ee5b319d9e) | ok |
-| neg6-double-withdraw | [0x816b49e9…](https://explorer-studio.genlayer.com/tx/0x816b49e935567b8c453c03679266efee7424e4f14b07792120d5a97d33c2121d) | error-observed · error NO_CREDIT |
-| neg1-double-settle | [0x424fc416…](https://explorer-studio.genlayer.com/tx/0x424fc416e37568fbd6468e57f0360266f1c4c12442ce28b734b74b15a532aaa4) | error-observed · error CALL_NOT_FUNDED |
-| neg2-call-unknown-endpoint | [0xc2cf2278…](https://explorer-studio.genlayer.com/tx/0xc2cf2278b0ce0bb9f6242078461a9aa0a4c8a79f08e7815c91cbabf20fd2377d) | error-observed · error ENDPOINT_NOT_FOUND |
-| neg3-list-price-zero | [0x249e34a0…](https://explorer-studio.genlayer.com/tx/0x249e34a03a579c705aa4fc3153c14307ae69a920c7d5bb7214e677db96512a24) | error-observed · error PRICE |
-| neg4-list-price-eleven | [0xf581dcda…](https://explorer-studio.genlayer.com/tx/0xf581dcda4aa4348e30dfddb2191b6e90d4b350f3830a0afee780b59048bc418b) | error-observed · error PRICE |
-| neg7-list-non-openmeteo-url | [0x3364089d…](https://explorer-studio.genlayer.com/tx/0x3364089d64144ba50a1ea30b3cb1d3d18b315067186c1c13d07329444b63e17f) | error-observed · error URL_HOST |
-| neg8-call-wrong-value | [0xdd021afa…](https://explorer-studio.genlayer.com/tx/0xdd021afaef3742599b5dcec10e8b1b34265e5434dc6a14b3350f37b0b66b5c6a) | error-observed · error VALUE_MUST_EQUAL_PRICE |
+| e1-list-good | [0xc9f30df9…](https://explorer-studio.genlayer.com/tx/0xc9f30df9d1732e9429837db991265ac1630f428cee469a9a7be00ce5c5e9d142) | ok |
+| e2-list-bad | [0x922cab51…](https://explorer-studio.genlayer.com/tx/0x922cab512662a9705aecd997b9609aadb845ffb0fc4e566dcd3dfccdaaf110d4) | ok |
+| e3-list-unreachable | [0x5ba52183…](https://explorer-studio.genlayer.com/tx/0x5ba521833708cb32eed7bb9d9588d1a3cdef937ec6a72856821072a34d770464) | ok |
+| c1-call | [0x505399c7…](https://explorer-studio.genlayer.com/tx/0x505399c7e3e250faff2cdd51df4794c9761d9a410f069800bfd680e91e915589) | ok |
+| c1-settle | [0xb83fcac8…](https://explorer-studio.genlayer.com/tx/0xb83fcac895b6f12eea036be7e2c9a5b7ddaea0532921e44933ad0318b82ddcfe) | ok · verdict RESPONSE_VALID |
+| c2-call | [0x102da22a…](https://explorer-studio.genlayer.com/tx/0x102da22a1aae06b8f5d4f50545d9ce7140d056b16e20fb629bc5cda762707aff) | ok |
+| c2-settle | [0xf1ea5aec…](https://explorer-studio.genlayer.com/tx/0xf1ea5aec2b77e56bed765868e4a6dbca41c104df80dc28963ad5d983bd95d0b7) | ok · verdict RESPONSE_VALID |
+| c3-call | [0xe7e92552…](https://explorer-studio.genlayer.com/tx/0xe7e9255236d108b150b94b99fb172896ce9619c67f52497f47f159d8d40350f1) | ok |
+| c3-settle | [0x5899f788…](https://explorer-studio.genlayer.com/tx/0x5899f788203ee56aab9b122ed7bd4d64589896edc558858a0810798345a2e95c) | ok · verdict RESPONSE_INVALID |
+| c4-call | [0xf6f89d2f…](https://explorer-studio.genlayer.com/tx/0xf6f89d2f8671a8e7a0e88c12d47e526808f9308203d36a0198571213f6e89f0e) | ok |
+| c4-settle | [0x5a444bfd…](https://explorer-studio.genlayer.com/tx/0x5a444bfdf8b0e9f2e43899ef129648be452e74de8aae15aae2bf7f10304b7a94) | ok · verdict UNREACHABLE |
+| c5-call | [0xec49813e…](https://explorer-studio.genlayer.com/tx/0xec49813ec6f3644d3950f7b190785f6f668c4bcdacc89e24ed2eee24a4ab4fd6) | ok |
+| neg0-stranger-cancel | [0xdbb6b9e4…](https://explorer-studio.genlayer.com/tx/0xdbb6b9e4005f44e2a243973e88708e0577fae34a2cf9879f7f26842fc351b65b) | error-observed · error ONLY_BUYER_CAN_CANCEL |
+| c5-cancel | [0xc12efeef…](https://explorer-studio.genlayer.com/tx/0xc12efeef8a812a4f88f0dabc3d4487d24fdfb42895734809f95f7ded889b1150) | ok |
+| neg5-stranger-withdraw | [0xcdaae841…](https://explorer-studio.genlayer.com/tx/0xcdaae8411b1822351e88c29431416525478c73c2ae6ca98e06e9a3a1c7af4d5f) | error-observed · error NO_CREDIT |
+| c1-provider-withdraw | [0x10317580…](https://explorer-studio.genlayer.com/tx/0x10317580a1165067995f1e62a9dee08e2adca81fd3f67d6238667ff93ee69dfa) | ok |
+| c2-provider-withdraw | [0x1f30d465…](https://explorer-studio.genlayer.com/tx/0x1f30d465508bd4d24960c366839b444508afc47a58b912f1d38584fc379c9cfe) | ok |
+| c3-buyer-withdraw | [0x99fec49c…](https://explorer-studio.genlayer.com/tx/0x99fec49cf3a01042989c98728daf6b253e0460a68ec76ad13c501eb638e2d539) | ok |
+| c4-buyer-withdraw | [0x58fb1082…](https://explorer-studio.genlayer.com/tx/0x58fb1082e9cf6b04a4474e23164ec96a8bd775c2d60d2de015d7fae723541dfc) | ok |
+| c5-buyer-withdraw | [0xeb75b24a…](https://explorer-studio.genlayer.com/tx/0xeb75b24ad7d967589ce9f6b0a03335e1e272e2ce2caa328b6c6ea86043e383c9) | ok |
+| c6-call | [0x83ca321e…](https://explorer-studio.genlayer.com/tx/0x83ca321e18e556fcd6337be99352f1f4164409b72b1959ffb03d100081be218b) | ok |
+| c6-settle | [0x492bb14f…](https://explorer-studio.genlayer.com/tx/0x492bb14f478bb8f43f6c8575d9f8e84aaf6a1d724421077cc6fafbea2b5568b6) | ok · verdict RESPONSE_VALID |
+| c6-provider-withdraw | [0x303d0c66…](https://explorer-studio.genlayer.com/tx/0x303d0c6659a4e66aa3fcadd6ba04613be4fc2470b3866c1b02221b073d075b3a) | ok |
+| neg6-double-withdraw | [0xd61bef89…](https://explorer-studio.genlayer.com/tx/0xd61bef89b766e4677882041eaf6f0c05bbe58760b093866575237d9597d1e113) | error-observed · error NO_CREDIT |
+| neg1-double-settle | [0xc700597f…](https://explorer-studio.genlayer.com/tx/0xc700597f3e0ede54e0a4e60e1a2887d0065616d3f4f5bb89891e6f4669a6e944) | error-observed · error CALL_NOT_FUNDED |
+| neg2-call-unknown-endpoint | [0x8b29be6d…](https://explorer-studio.genlayer.com/tx/0x8b29be6dd61ac31c94b68d662058ada6f7d9d7da509fe6bd095a95e6cd244696) | error-observed · error ENDPOINT_NOT_FOUND |
+| neg3-list-price-zero | [0xa11bbcd5…](https://explorer-studio.genlayer.com/tx/0xa11bbcd57cf88b3fd4df6a3a3719c2326e4b054a5bbab5028c0935867e9800dc) | error-observed · error PRICE |
+| neg4-list-price-eleven | [0x15e7ff20…](https://explorer-studio.genlayer.com/tx/0x15e7ff202123802daea4da0598c8ea2771d816b9728f48feb72c68bf66719cd2) | error-observed · error PRICE |
+| neg7-list-non-openmeteo-url | [0x19eb0715…](https://explorer-studio.genlayer.com/tx/0x19eb07159b4f6615eb7d8c140dc52ae7d37ba8c4e5e93cdc5f44466c4a3f480b) | error-observed · error URL_HOST |
+| neg8-call-wrong-value | [0x82610409…](https://explorer-studio.genlayer.com/tx/0x82610409ee52347f18437313f3f3434a061353972e4fc952f77c2a510f4a8429) | error-observed · error VALUE_MUST_EQUAL_PRICE |
+| neg9-list-junk-path | [0xfde1a52b…](https://explorer-studio.genlayer.com/tx/0xfde1a52bfc6ca138976bba238ca626c08734e7be5f08715157bc2591e23d7eab) | error-observed · error URL_HOST |
 
 ## Adversarial cases (all on-chain)
 
@@ -206,52 +231,16 @@
 | Double-withdraw an already withdrawn credit (neg6) | NO_CREDIT, state unchanged | error-observed, see table |
 | List a non-Open-Meteo URL (neg7) | URL_HOST, state unchanged | error-observed, see table |
 | Call an existing endpoint with 0 GEN instead of the exact price (neg8) | VALUE_MUST_EQUAL_PRICE, no value stranded | error-observed, see table |
+| List a junk path after the forecast path (neg9) | URL_HOST, state unchanged | error-observed, see table |
 | Bad-mode endpoint (E2, Open-Meteo forecast without a current field) | RESPONSE_INVALID, buyer refunded, violations +1 | settled INVALID, see C3 |
 | Unreachable endpoint (E3, Open-Meteo forecast with latitude 999, HTTP 400) | UNREACHABLE, buyer refunded, no violation | settled UNREACHABLE, see C4 |
 | Injection text inside a response body | Verdict follows the JSON schema only; instruction text cannot flip it | Mock test in tests/test_callsettle_mock.py (deterministic check, no LLM in the path) |
 
-## Browser write loops (C6 + C7, pre-registered in EXPECTED.md before each run)
+## Browser write loop C7 (pre-registered in EXPECTED.md, not yet run)
 
-Both runs used the live site in a real browser with the site's own
-in-browser temporary test accounts (never presented as wallet
-signatures). Hashes also live in `public/browser-transactions.json`
-so the receipts on the site link them; every hash below was re-read
-live by the main agent and confirmed FINALIZED with leader SUCCESS.
-
-| Step | Tx | Result |
-|------|----|--------|
-| C6 buy call on E1 (buyer 0xc7ec…9ea6, 3 GEN) | [0x7ed54f77…](https://explorer-studio.genlayer.com/tx/0x7ed54f7739afbfcfa3be5b13ab328d32e96c6e515c9caf3cf0fb0f3036920a88) | ok · call 6, FUNDED |
-| C6 settle call 6 | [0xb84e7a70…](https://explorer-studio.genlayer.com/tx/0xb84e7a70973e8fb1274ba2a91b53eb4de0c8b537d0188ef4c4415624cdbae1b8) | ok · RESPONSE_VALID (0_10), provider_credit 3 GEN |
-| C7 list E4 London (provider 0xa7cb…057c, 2 GEN) | [0xc6c41f9f…](https://explorer-studio.genlayer.com/tx/0xc6c41f9fa9d18665f2daef4636a0dcfc03813cccb1a6985398b66f183b906490) | ok · endpoint 4, ACTIVE |
-| C7 buy call on E4 (same temp account, 2 GEN) | [0xb8679ff7…](https://explorer-studio.genlayer.com/tx/0xb8679ff71542e97805d53890614a4749b6b751c5b11d88a2a8427e0ccc9c4bc5) | ok · call 7, FUNDED |
-| C7 settle call 7 | [0x2f9e84c9…](https://explorer-studio.genlayer.com/tx/0x2f9e84c9e56c26df1d306594dbbed555b189b49e4ebc7201d202a0ea0c7b4407) | ok · RESPONSE_VALID (0_10), provider_credit 2 GEN |
-| C7 withdraw provider credit (in-browser button) | [0xfcd6a1e6…](https://explorer-studio.genlayer.com/tx/0xfcd6a1e69420d7530b957e186e39ade926b4722fbb77e33805e11d4fb0f00f2c) | ok · 2 GEN withdrawn, receipt shows Withdrawn |
-
-Cold start (real browser, both passes): page renders in English by
-default; before any FINALIZED readback the meter shows dashes +
-UNCONFIRMED and export is disabled; no VERIFIED/success styling or
-payout number appears before a readback. Second pass also confirmed
-the fixed receipt detail shows real tx hashes (no "UNCONFIRMED",
-no "Tx hashUNCONFIRMED"), no viem error line on the happy path, and
-the account panel requires an in-page disconnect confirmation.
-One first-load stall was observed in pass 2 (readback stuck 7+
-minutes, fixed by one reload); the readback path now races each RPC
-call against a 30s timeout with retries. 375px: this browser has no
-viewport-resize control, so scrollWidth could not be measured; at
-500% zoom (≈384 CSS px) the whole page showed no horizontal
-overflow, cut-off or overlap.
-
-## Final live ledger (after C6 + C7)
-
-- GEN in: 18 (13 scripted + 3 C6 + 2 C7)
-- GEN withdrawn on-chain: 15 (13 scripted + 2 C7 provider withdraw)
-- Contract balance: 3 GEN = C6's provider credit to P1
-  (0x1535afc1f57f5bc886b98725de455df24a266238), whose evidence-run
-  temporary key was deleted after the evidence run under the
-  checkpoint rule. It is a legitimate recorded credit, not stranded
-  value: escrowed is exactly 3 GEN, and withdrawal of a provider
-  credit in the browser is proven by C7. Testnet GEN only, zero
-  cash cost.
-- Escrowed: 3 GEN, total violations: 1 (endpoint E2 only)
-- E1: settled_valid 3, violations 0. E4: settled_valid 1, violations 0.
-- Calls: 7, endpoints: 4.
+After the scripted evidence run, one more endpoint and call are made
+through the live site in a real browser, with the site's own
+in-browser temporary test account (never presented as a wallet
+signature). No browser transactions have been recorded yet; when
+they are, they are listed in `docs/browser-transactions.json` and
+in the table below, and this file is re-generated.

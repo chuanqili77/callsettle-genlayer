@@ -1,0 +1,178 @@
+{
+  "network": "Stable Studionet",
+  "chain_id": 61999,
+  "contract_address": "0x58c71cDA976912e9F16438317dE7804523EFaEe6",
+  "deploy_tx": "0xeb68bda674c14e2e555cd92d372220d72b43448bcef404a17fd110da1cecf4a1",
+  "complete": true,
+  "transactions": [
+    {
+      "label": "e1-list-good",
+      "hash": "0xa3cfe81ebaf9959fd5293ce59eb3e85d646e2d69820b46a887d673712faec8e4",
+      "result": "ok"
+    },
+    {
+      "label": "e2-list-bad",
+      "hash": "0x7b60f20040335986649b61fd3c2afa5231f39cc9731f9ea6facc321ce5e2fcf2",
+      "result": "ok"
+    },
+    {
+      "label": "e3-list-unreachable",
+      "hash": "0xccfb878d1ac4f912214397c875d3d170ed013c09883121845a02d088a3d9349a",
+      "result": "ok"
+    },
+    {
+      "label": "c1-call",
+      "hash": "0x2d0b37e2849e8b635f841ebe6b8124d8e1af720ea2b4cd4b7d413ef4fa167f92",
+      "result": "ok"
+    },
+    {
+      "label": "c1-settle",
+      "hash": "0x93eceac86bf0af495398fe5a1fe02569499ea43cafa4c342f525cccaeb0574e9",
+      "result": "ok",
+      "verdict": "RESPONSE_VALID",
+      "temperature_band": "0_10",
+      "attempts": 1,
+      "caller": "OUT"
+    },
+    {
+      "label": "c2-call",
+      "hash": "0xe727fa158188bac971c135d2114a8cc3d10fe979e16849a3fd8eebf87a4fb7b6",
+      "result": "ok"
+    },
+    {
+      "label": "c2-settle",
+      "hash": "0x786b0e7f5aa6ab32ec5e562463d757a95476389722ad1e8dd485180f518fed78",
+      "result": "ok",
+      "verdict": "RESPONSE_VALID",
+      "temperature_band": "0_10",
+      "attempts": 1,
+      "caller": "OUT"
+    },
+    {
+      "label": "c3-call",
+      "hash": "0x3143f7d500f6522c038154b593b2b93c9ba5dd21e6ae48b722e15403c1210549",
+      "result": "ok"
+    },
+    {
+      "label": "c3-settle",
+      "hash": "0xafea0f3a611365bcbe4b10cdd7c79fbc5ff4dd6e648d1c0867cc3459d9e5210b",
+      "result": "ok",
+      "verdict": "RESPONSE_INVALID",
+      "temperature_band": "NONE",
+      "attempts": 1,
+      "caller": "OUT"
+    },
+    {
+      "label": "c4-call",
+      "hash": "0x9e15df150d34286a580c3b6a9348f5b052d15a3d865907c0ce7308dbd28577e0",
+      "result": "ok"
+    },
+    {
+      "label": "c4-settle",
+      "hash": "0x1816213c90153d2fa322c476453f17a282af7a2825577798bd293d154b7b0003",
+      "result": "ok",
+      "verdict": "UNREACHABLE",
+      "temperature_band": "NONE",
+      "attempts": 1,
+      "caller": "OUT"
+    },
+    {
+      "label": "c5-call",
+      "hash": "0x10b87f22b223cf16743cfd4944f41a0c3e92d5c6efc56d9df48f74db277d0695",
+      "result": "ok"
+    },
+    {
+      "label": "neg0-stranger-cancel",
+      "hash": "0x4db1b4bff2642789a329ad42e1e5140719b6799b4f08c4f9f8bfc55f2a76f6ce",
+      "result": "error-observed",
+      "expected_error": "ONLY_BUYER_CAN_CANCEL",
+      "unchanged_state": true
+    },
+    {
+      "label": "c5-cancel",
+      "hash": "0xd19ac4eb1c76737384d239e6244a13ac616602775696a079d0251a874238c6ee",
+      "result": "ok"
+    },
+    {
+      "label": "neg5-stranger-withdraw",
+      "hash": "0x024dd11e6afa0f2311b24ea5a2bb4c8007f75df1d2bc0bc9c1b5923798371c69",
+      "result": "error-observed",
+      "expected_error": "NO_CREDIT",
+      "unchanged_state": true
+    },
+    {
+      "label": "c1-provider-withdraw",
+      "hash": "0xd5ee34a3cc64ff097e3200c5769243ee21063730630f77fa6a9f36ccc9b9eb22",
+      "result": "ok"
+    },
+    {
+      "label": "c2-provider-withdraw",
+      "hash": "0x8a7f1fc3229346388fe37a0051b58237577bcd7f2b386a94614d34303cdd658f",
+      "result": "ok"
+    },
+    {
+      "label": "c3-buyer-withdraw",
+      "hash": "0xf995c33dd145680e1a77c9930abbe1127c8cd068f6d2c5b77f3da7c68fd878ad",
+      "result": "ok"
+    },
+    {
+      "label": "c4-buyer-withdraw",
+      "hash": "0x05cc2344cc44ffbc2d49129d0596a8c86577d8c4c7d0e1be9cb075a2ccda6cdb",
+      "result": "ok"
+    },
+    {
+      "label": "c5-buyer-withdraw",
+      "hash": "0xc2024b5a623bb3a40b4d47d8eeace6f0e180192f60bba5cdcb2262ee5b319d9e",
+      "result": "ok"
+    },
+    {
+      "label": "neg6-double-withdraw",
+      "hash": "0x816b49e935567b8c453c03679266efee7424e4f14b07792120d5a97d33c2121d",
+      "result": "error-observed",
+      "expected_error": "NO_CREDIT",
+      "unchanged_state": true
+    },
+    {
+      "label": "neg1-double-settle",
+      "hash": "0x424fc416e37568fbd6468e57f0360266f1c4c12442ce28b734b74b15a532aaa4",
+      "result": "error-observed",
+      "expected_error": "CALL_NOT_FUNDED",
+      "unchanged_state": true
+    },
+    {
+      "label": "neg2-call-unknown-endpoint",
+      "hash": "0xc2cf2278b0ce0bb9f6242078461a9aa0a4c8a79f08e7815c91cbabf20fd2377d",
+      "result": "error-observed",
+      "expected_error": "ENDPOINT_NOT_FOUND",
+      "unchanged_state": true
+    },
+    {
+      "label": "neg3-list-price-zero",
+      "hash": "0x249e34a03a579c705aa4fc3153c14307ae69a920c7d5bb7214e677db96512a24",
+      "result": "error-observed",
+      "expected_error": "PRICE",
+      "unchanged_state": true
+    },
+    {
+      "label": "neg4-list-price-eleven",
+      "hash": "0xf581dcda4aa4348e30dfddb2191b6e90d4b350f3830a0afee780b59048bc418b",
+      "result": "error-observed",
+      "expected_error": "PRICE",
+      "unchanged_state": true
+    },
+    {
+      "label": "neg7-list-non-openmeteo-url",
+      "hash": "0x3364089d64144ba50a1ea30b3cb1d3d18b315067186c1c13d07329444b63e17f",
+      "result": "error-observed",
+      "expected_error": "URL_HOST",
+      "unchanged_state": true
+    },
+    {
+      "label": "neg8-call-wrong-value",
+      "hash": "0xdd021afaef3742599b5dcec10e8b1b34265e5434dc6a14b3350f37b0b66b5c6a",
+      "result": "error-observed",
+      "expected_error": "VALUE_MUST_EQUAL_PRICE",
+      "unchanged_state": true
+    }
+  ]
+}

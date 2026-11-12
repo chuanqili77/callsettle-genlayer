@@ -1,6 +1,6 @@
 // Stamp the built bundle hash into docs/index.html so a cold-start check can
-// prove the browser loaded the current build (TenderCourt lesson:
-// an unversioned bundle served stale code and produced false FAILs).
+// prove the browser loaded the current build (an unversioned bundle
+// served stale code and produced false FAILs).
 // Vite already content-hashes the bundle filename; the ?v= stamp is an
 // extra explicit marker. Run automatically as the vite `postbuild` step.
 import fs from 'node:fs';
