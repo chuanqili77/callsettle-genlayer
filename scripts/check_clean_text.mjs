@@ -15,7 +15,7 @@ const patterns = [
 ];
 function inspect(file) {
   const data = fs.readFileSync(file, 'utf8');
-  for (const [i, line] of data.split('\\n').entries()) {
+  for (const [i, line] of data.split('\n').entries()) {
     if (patterns.some((pattern) => pattern.test(line))) {
       findings.push(path.relative(root, file) + ':' + (i + 1));
     }
