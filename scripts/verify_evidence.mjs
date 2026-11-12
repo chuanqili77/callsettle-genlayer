@@ -99,6 +99,10 @@ const expectCalls = {
   3: {status: 'REFUNDED', verdict: 'RESPONSE_INVALID', provider_credit: 0, buyer_credit: 2000000000000000000, has_required_fields: false},
   4: {status: 'REFUNDED', verdict: 'UNREACHABLE', provider_credit: 0, buyer_credit: 2000000000000000000, has_required_fields: false},
   5: {status: 'CANCELLED', verdict: '', provider_credit: 0, buyer_credit: 3000000000000000000, has_required_fields: false},
+  // Browser write loops (pre-registered in EXPECTED.md before each run,
+  // hashes in public/browser-transactions.json, re-read here as well).
+  6: {status: 'SETTLED', verdict: 'RESPONSE_VALID', provider_credit: 3000000000000000000, buyer_credit: 0, has_required_fields: true},
+  7: {status: 'SETTLED', verdict: 'RESPONSE_VALID', provider_credit: 2000000000000000000, buyer_credit: 0, has_required_fields: true},
 };
 for (const [id, e] of Object.entries(expectCalls)) {
   const c = await read('get_call', [Number(id)]);
@@ -113,15 +117,21 @@ for (const [id, e] of Object.entries(expectCalls)) {
 const e1 = await read('get_endpoint', [1]);
 const e2 = await read('get_endpoint', [2]);
 const e3 = await read('get_endpoint', [3]);
-ok('E1 readback: 2 settled_valid, 0 violations', e1.settled_valid === 2 && e1.violations === 0, JSON.stringify(e1));
+const e4 = await read('get_endpoint', [4]);
+ok('E1 readback: 3 settled_valid, 0 violations', e1.settled_valid === 3 && e1.violations === 0, JSON.stringify(e1));
 ok('E2 readback: 0 settled_valid, 1 violation', e2.settled_valid === 0 && e2.violations === 1, JSON.stringify(e2));
 ok('E3 readback: 0 settled_valid, 0 violations', e3.settled_valid === 0 && e3.violations === 0, JSON.stringify(e3));
+ok('E4 readback: 1 settled_valid, 0 violations', e4.settled_valid === 1 && e4.violations === 0, JSON.stringify(e4));
+const c6 = await read('get_call', [6]);
+const c7 = await read('get_call', [7]);
+ok('call 6 provider credit unwithdrawn (P1 key deleted after evidence run, disclosed)', c6.provider_withdrawn === false && c6.provider_credit === 3000000000000000000, JSON.stringify(c6));
+ok('call 7 provider credit withdrawn in browser', c7.provider_withdrawn === true && c7.provider_credit === 2000000000000000000, JSON.stringify(c7));
 const counts = await read('get_counts', []);
-ok('counts: 3 endpoints, 5 calls, 1 violation',
-  counts.endpoint_count === 3 && counts.call_count === 5 && counts.total_violations === 1, JSON.stringify(counts));
-ok('ledger: 13 GEN in = 13 out, escrow 0, violations 1; contract balance 0 GEN (zero stranded value — every failed-payable negative sent 0 GEN)',
-  counts.total_received_wei === 13000000000000000000 && counts.total_withdrawn_wei === 13000000000000000000
-  && counts.contract_balance_wei === 0 && counts.escrowed_wei === 0, JSON.stringify(counts));
+ok('counts: 4 endpoints, 7 calls, 1 violation',
+  counts.endpoint_count === 4 && counts.call_count === 7 && counts.total_violations === 1, JSON.stringify(counts));
+ok('ledger: 18 GEN in, 15 GEN withdrawn, balance 3 GEN (= C6 provider credit to P1, key deleted, disclosed — not stranded value); escrowed 3 GEN, violations 1',
+  counts.total_received_wei === 18000000000000000000 && counts.total_withdrawn_wei === 15000000000000000000
+  && counts.contract_balance_wei === 3000000000000000000 && counts.escrowed_wei === 3000000000000000000, JSON.stringify(counts));
 ok('protocol is callsettle-1.1', (await reader.readContract({address: ADDRESS, functionName: 'get_protocol', args: [], transactionHashVariant: 'latest-final'})) === 'callsettle-1.1');
 
 console.log(`\nverify: ${pass} PASS, ${fail} FAIL, ${txs.transactions.length} txs checked`);

@@ -209,3 +209,49 @@
 | Bad-mode endpoint (E2, Open-Meteo forecast without a current field) | RESPONSE_INVALID, buyer refunded, violations +1 | settled INVALID, see C3 |
 | Unreachable endpoint (E3, Open-Meteo forecast with latitude 999, HTTP 400) | UNREACHABLE, buyer refunded, no violation | settled UNREACHABLE, see C4 |
 | Injection text inside a response body | Verdict follows the JSON schema only; instruction text cannot flip it | Mock test in tests/test_callsettle_mock.py (deterministic check, no LLM in the path) |
+
+## Browser write loops (C6 + C7, pre-registered in EXPECTED.md before each run)
+
+Both runs used the live site in a real browser with the site's own
+in-browser temporary test accounts (never presented as wallet
+signatures). Hashes also live in `public/browser-transactions.json`
+so the receipts on the site link them; every hash below was re-read
+live by the main agent and confirmed FINALIZED with leader SUCCESS.
+
+| Step | Tx | Result |
+|------|----|--------|
+| C6 buy call on E1 (buyer 0xc7ec…9ea6, 3 GEN) | [0x7ed54f77…](https://explorer-studio.genlayer.com/tx/0x7ed54f7739afbfcfa3be5b13ab328d32e96c6e515c9caf3cf0fb0f3036920a88) | ok · call 6, FUNDED |
+| C6 settle call 6 | [0xb84e7a70…](https://explorer-studio.genlayer.com/tx/0xb84e7a70973e8fb1274ba2a91b53eb4de0c8b537d0188ef4c4415624cdbae1b8) | ok · RESPONSE_VALID (0_10), provider_credit 3 GEN |
+| C7 list E4 London (provider 0xa7cb…057c, 2 GEN) | [0xc6c41f9f…](https://explorer-studio.genlayer.com/tx/0xc6c41f9fa9d18665f2daef4636a0dcfc03813cccb1a6985398b66f183b906490) | ok · endpoint 4, ACTIVE |
+| C7 buy call on E4 (same temp account, 2 GEN) | [0xb8679ff7…](https://explorer-studio.genlayer.com/tx/0xb8679ff71542e97805d53890614a4749b6b751c5b11d88a2a8427e0ccc9c4bc5) | ok · call 7, FUNDED |
+| C7 settle call 7 | [0x2f9e84c9…](https://explorer-studio.genlayer.com/tx/0x2f9e84c9e56c26df1d306594dbbed555b189b49e4ebc7201d202a0ea0c7b4407) | ok · RESPONSE_VALID (0_10), provider_credit 2 GEN |
+| C7 withdraw provider credit (in-browser button) | [0xfcd6a1e6…](https://explorer-studio.genlayer.com/tx/0xfcd6a1e69420d7530b957e186e39ade926b4722fbb77e33805e11d4fb0f00f2c) | ok · 2 GEN withdrawn, receipt shows Withdrawn |
+
+Cold start (real browser, both passes): page renders in English by
+default; before any FINALIZED readback the meter shows dashes +
+UNCONFIRMED and export is disabled; no VERIFIED/success styling or
+payout number appears before a readback. Second pass also confirmed
+the fixed receipt detail shows real tx hashes (no "UNCONFIRMED",
+no "Tx hashUNCONFIRMED"), no viem error line on the happy path, and
+the account panel requires an in-page disconnect confirmation.
+One first-load stall was observed in pass 2 (readback stuck 7+
+minutes, fixed by one reload); the readback path now races each RPC
+call against a 30s timeout with retries. 375px: this browser has no
+viewport-resize control, so scrollWidth could not be measured; at
+500% zoom (≈384 CSS px) the whole page showed no horizontal
+overflow, cut-off or overlap.
+
+## Final live ledger (after C6 + C7)
+
+- GEN in: 18 (13 scripted + 3 C6 + 2 C7)
+- GEN withdrawn on-chain: 15 (13 scripted + 2 C7 provider withdraw)
+- Contract balance: 3 GEN = C6's provider credit to P1
+  (0x1535afc1f57f5bc886b98725de455df24a266238), whose evidence-run
+  temporary key was deleted after the evidence run under the
+  checkpoint rule. It is a legitimate recorded credit, not stranded
+  value: escrowed is exactly 3 GEN, and withdrawal of a provider
+  credit in the browser is proven by C7. Testnet GEN only, zero
+  cash cost.
+- Escrowed: 3 GEN, total violations: 1 (endpoint E2 only)
+- E1: settled_valid 3, violations 0. E4: settled_valid 1, violations 0.
+- Calls: 7, endpoints: 4.

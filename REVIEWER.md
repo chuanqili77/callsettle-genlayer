@@ -33,10 +33,26 @@ an Open-Meteo forecast URL with latitude 999, which returns HTTP 400
 1. Open the contract address above in the explorer; confirm the deploy
    tx hash matches.
 2. Pick any tx hash in the table below; confirm it is FINALIZED.
-3. Read the contract's `get_counts` (latest-final): 13 GEN in =
-   13 GEN out, balance 0, escrow 0, violations 1.
+3. Read the contract's `get_counts` (latest-final): 18 GEN in, 15 GEN
+   withdrawn, balance 3 GEN (= C6's provider credit to P1, disclosed
+   in EVIDENCE.md), escrowed 3 GEN, violations 1.
 4. Read call 3 (`get_call` 3): REFUNDED / RESPONSE_INVALID,
-   buyer_credit 2 GEN. Read call 4: REFUNDED / UNREACHABLE.
+   buyer_credit 2 GEN. Read call 4: REFUNDED / UNREACHABLE. Read
+   call 7: SETTLED / RESPONSE_VALID, provider_withdrawn true.
+
+## Browser write-loop transactions (C6 + C7)
+
+Pre-registered in EXPECTED.md before each run; hashes also in
+`public/browser-transactions.json`. All FINALIZED, re-read live.
+
+| Label | Tx | Result |
+|-------|----|--------|
+| c6-call | [0x7ed54f77…](https://explorer-studio.genlayer.com/tx/0x7ed54f7739afbfcfa3be5b13ab328d32e96c6e515c9caf3cf0fb0f3036920a88) | ok · call 6 |
+| c6-settle | [0xb84e7a70…](https://explorer-studio.genlayer.com/tx/0xb84e7a70973e8fb1274ba2a91b53eb4de0c8b537d0188ef4c4415624cdbae1b8) | ok · RESPONSE_VALID |
+| e4-list | [0xc6c41f9f…](https://explorer-studio.genlayer.com/tx/0xc6c41f9fa9d18665f2daef4636a0dcfc03813cccb1a6985398b66f183b906490) | ok · endpoint 4 |
+| c7-call | [0xb8679ff7…](https://explorer-studio.genlayer.com/tx/0xb8679ff71542e97805d53890614a4749b6b751c5b11d88a2a8427e0ccc9c4bc5) | ok · call 7 |
+| c7-settle | [0x2f9e84c9…](https://explorer-studio.genlayer.com/tx/0x2f9e84c9e56c26df1d306594dbbed555b189b49e4ebc7201d202a0ea0c7b4407) | ok · RESPONSE_VALID |
+| c7-provider-withdraw | [0xfcd6a1e6…](https://explorer-studio.genlayer.com/tx/0xfcd6a1e69420d7530b957e186e39ade926b4722fbb77e33805e11d4fb0f00f2c) | ok · 2 GEN withdrawn in-browser |
 
 ## Evidence transactions
 
