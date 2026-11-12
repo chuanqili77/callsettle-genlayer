@@ -1,0 +1,125 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> callsettle-genlayer@1.0.0 verify
+> node scripts/verify_evidence.mjs
+
+PASS byte parity (deployed code == repo source)
+PASS source sha matches deployment.json
+PASS deploy tx recorded
+PASS chain id is Stable Studionet 61999
+PASS deployment transaction FINALIZED+AGREE+SUCCESS
+PASS recorded deployment hashes agree
+PASS tx evidence:e1-list-good sent to the current contract
+PASS tx evidence:e1-list-good FINALIZED+AGREE+SUCCESS
+PASS tx evidence:e2-list-bad sent to the current contract
+PASS tx evidence:e2-list-bad FINALIZED+AGREE+SUCCESS
+PASS tx evidence:e3-list-unreachable sent to the current contract
+PASS tx evidence:e3-list-unreachable FINALIZED+AGREE+SUCCESS
+PASS tx evidence:c1-call sent to the current contract
+PASS tx evidence:c1-call FINALIZED+AGREE+SUCCESS
+PASS tx evidence:c1-settle sent to the current contract
+PASS tx evidence:c1-settle FINALIZED+AGREE+SUCCESS
+PASS tx evidence:c1-settle verdict recorded as RESPONSE_VALID
+PASS tx evidence:c2-call sent to the current contract
+PASS tx evidence:c2-call FINALIZED+AGREE+SUCCESS
+PASS tx evidence:c2-settle sent to the current contract
+PASS tx evidence:c2-settle FINALIZED+AGREE+SUCCESS
+PASS tx evidence:c2-settle verdict recorded as RESPONSE_VALID
+PASS tx evidence:c3-call sent to the current contract
+PASS tx evidence:c3-call FINALIZED+AGREE+SUCCESS
+PASS tx evidence:c3-settle sent to the current contract
+PASS tx evidence:c3-settle FINALIZED+AGREE+SUCCESS
+PASS tx evidence:c3-settle verdict recorded as RESPONSE_INVALID
+PASS tx evidence:c4-call sent to the current contract
+PASS tx evidence:c4-call FINALIZED+AGREE+SUCCESS
+PASS tx evidence:c4-settle sent to the current contract
+PASS tx evidence:c4-settle FINALIZED+AGREE+SUCCESS
+PASS tx evidence:c4-settle verdict recorded as UNREACHABLE
+PASS tx evidence:c5-call sent to the current contract
+PASS tx evidence:c5-call FINALIZED+AGREE+SUCCESS
+PASS tx evidence:neg0-stranger-cancel sent to the current contract
+PASS tx evidence:neg0-stranger-cancel FINALIZED+AGREE+ERROR with exact payload ONLY_BUYER_CAN_CANCEL
+PASS tx evidence:c5-cancel sent to the current contract
+PASS tx evidence:c5-cancel FINALIZED+AGREE+SUCCESS
+PASS tx evidence:neg5-stranger-withdraw sent to the current contract
+PASS tx evidence:neg5-stranger-withdraw FINALIZED+AGREE+ERROR with exact payload NO_CREDIT
+PASS tx evidence:c1-provider-withdraw sent to the current contract
+PASS tx evidence:c1-provider-withdraw FINALIZED+AGREE+SUCCESS
+PASS tx evidence:c2-provider-withdraw sent to the current contract
+PASS tx evidence:c2-provider-withdraw FINALIZED+AGREE+SUCCESS
+PASS tx evidence:c3-buyer-withdraw sent to the current contract
+PASS tx evidence:c3-buyer-withdraw FINALIZED+AGREE+SUCCESS
+PASS tx evidence:c4-buyer-withdraw sent to the current contract
+PASS tx evidence:c4-buyer-withdraw FINALIZED+AGREE+SUCCESS
+PASS tx evidence:c5-buyer-withdraw sent to the current contract
+PASS tx evidence:c5-buyer-withdraw FINALIZED+AGREE+SUCCESS
+PASS tx evidence:c6-call sent to the current contract
+PASS tx evidence:c6-call FINALIZED+AGREE+SUCCESS
+PASS tx evidence:c6-settle sent to the current contract
+PASS tx evidence:c6-settle FINALIZED+AGREE+SUCCESS
+PASS tx evidence:c6-settle verdict recorded as RESPONSE_VALID
+PASS tx evidence:c6-provider-withdraw sent to the current contract
+PASS tx evidence:c6-provider-withdraw FINALIZED+AGREE+SUCCESS
+PASS tx evidence:neg6-double-withdraw sent to the current contract
+PASS tx evidence:neg6-double-withdraw FINALIZED+AGREE+ERROR with exact payload NO_CREDIT
+PASS tx evidence:neg1-double-settle sent to the current contract
+PASS tx evidence:neg1-double-settle FINALIZED+AGREE+ERROR with exact payload CALL_NOT_FUNDED
+PASS tx evidence:neg2-call-unknown-endpoint sent to the current contract
+PASS tx evidence:neg2-call-unknown-endpoint FINALIZED+AGREE+ERROR with exact payload ENDPOINT_NOT_FOUND
+PASS tx evidence:neg3-list-price-zero sent to the current contract
+PASS tx evidence:neg3-list-price-zero FINALIZED+AGREE+ERROR with exact payload PRICE
+PASS tx evidence:neg4-list-price-eleven sent to the current contract
+PASS tx evidence:neg4-list-price-eleven FINALIZED+AGREE+ERROR with exact payload PRICE
+PASS tx evidence:neg7-list-non-openmeteo-url sent to the current contract
+PASS tx evidence:neg7-list-non-openmeteo-url FINALIZED+AGREE+ERROR with exact payload URL_HOST
+PASS tx evidence:neg8-call-wrong-value sent to the current contract
+PASS tx evidence:neg8-call-wrong-value FINALIZED+AGREE+ERROR with exact payload VALUE_MUST_EQUAL_PRICE
+PASS tx evidence:neg9-list-junk-path sent to the current contract
+PASS tx evidence:neg9-list-junk-path FINALIZED+AGREE+ERROR with exact payload URL_HOST
+PASS latest-final endpoint readback has unique endpoint ids and URLs
+PASS call 1 readback == EXPECTED.md
+PASS call 1 temperature_band is a band string, never a float
+PASS call 1 settlement-time snapshot is consistent with its verdict and band
+PASS call 2 readback == EXPECTED.md
+PASS call 2 temperature_band is a band string, never a float
+PASS call 2 settlement-time snapshot is consistent with its verdict and band
+PASS call 3 readback == EXPECTED.md
+PASS call 3 temperature_band is a band string, never a float
+PASS call 3 settlement-time snapshot is consistent with its verdict and band
+PASS call 4 readback == EXPECTED.md
+PASS call 4 temperature_band is a band string, never a float
+PASS call 4 settlement-time snapshot is consistent with its verdict and band
+PASS call 5 readback == EXPECTED.md
+PASS call 5 temperature_band is a band string, never a float
+PASS call 5 settlement-time snapshot is consistent with its verdict and band
+PASS call 6 readback == EXPECTED.md
+PASS call 6 temperature_band is a band string, never a float
+PASS call 6 settlement-time snapshot is consistent with its verdict and band
+PASS E1 readback: 3 settled_valid, 0 violations
+PASS E2 readback: 0 settled_valid, 1 violation
+PASS E3 readback: 0 settled_valid, 0 violations
+PASS call 6 provider credit withdrawn inside the scripted run
+counts/ledger (scripted): superseded by the post-browser checks in section 4
+PASS protocol is callsettle-1.3
+
+browser write loop: 4 txs recorded, verifying live
+PASS browser file names the same contract
+PASS tx browser:e4-list sent to the current contract
+PASS tx browser:e4-list FINALIZED+AGREE+SUCCESS
+PASS tx browser:c7-call sent to the current contract
+PASS tx browser:c7-call FINALIZED+AGREE+SUCCESS
+PASS tx browser:c7-settle sent to the current contract
+PASS tx browser:c7-settle FINALIZED+AGREE+SUCCESS
+PASS tx browser:c7-provider-withdraw sent to the current contract
+PASS tx browser:c7-provider-withdraw FINALIZED+AGREE+SUCCESS
+PASS browser c7-settle: on-chain verdict == recorded RESPONSE_VALID
+PASS browser c7-settle: settlement-time snapshot is consistent
+PASS browser c7-provider-withdraw: provider credit withdrawn on-chain
+PASS E4 readback: Paris endpoint, ACTIVE, price 2 GEN
+PASS C8 (call 7) readback == EXPECTED.md (browser loop)
+PASS C8 (call 7) settlement-time snapshot is consistent
+PASS counts after browser loop: 4 endpoints, 7 calls, 1 violation
+PASS ledger after browser loop: 18 GEN in, 18 GEN withdrawn, balance 0, escrowed 0
+
+verify: 114 PASS, 0 FAIL, 31 scripted txs + 4 browser txs checked
+INDEPENDENT VERIFICATION PASS

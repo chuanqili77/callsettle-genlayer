@@ -186,3 +186,11 @@ npm test             # mock tests
 node scripts/byte_parity.mjs
 node scripts/verify_evidence.mjs
 ```
+
+## Historical snapshot verification
+
+The read-only verifier resolves each call’s endpoint from latest-final chain state and validates RESPONSE_VALID timestamps in that endpoint’s explicit IANA timezone. Historical snapshots do not expire. Nonexistent DST wall times, invalid calendar dates, non-finite/out-of-range temperatures, negative/non-finite wind, and inconsistent temperature bands are rejected. Repeated DST times retain both UTC candidates; without an offset, the stored wall clock does not identify one unique instant. This validates snapshot consistency, not the truth or provenance of the original weather measurement.
+
+The deliberately unreachable E3 has no valid-response snapshot and needs no timezone; it still must resolve to a chain-read endpoint. Unknown verdicts or a missing endpoint fail validation. Wind remains optional under the deployed mode; no physical upper wind threshold is claimed. The contract source is unchanged.
+
+Latest independent live verification: 114 PASS, 0 FAIL across 31 scripted and 4 browser transactions, plus the deployment receipt. Latest-final ledger: 18 GEN received, 18 withdrawn, zero balance/escrow. Details: [snapshot verification](evidence/snapshot-verification-2026-11-13.json). Existing transaction hashes and expectations are preserved.

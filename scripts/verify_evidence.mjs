@@ -18,6 +18,7 @@ import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 import {createClient} from 'genlayer-js';
 import {studionet} from 'genlayer-js/chains';
+import {snapshotGood} from './snapshot_validation.mjs';
 
 const RPC_URL = 'https://studio.genlayer.com/api';
 const CHAIN_ID = 61999;
@@ -38,35 +39,6 @@ function ok(name, cond, extra = '') {
 // INFO lines are verified facts that are NOT counted as PASS: a
 // fail-closed MAJORITY_DISAGREE retry is recorded, never a pass.
 function note(name) { console.log('INFO', name); }
-function bandOf(temp) {
-  if (temp < 0) return 'LT0';
-  if (temp < 10) return '0_10';
-  if (temp < 20) return '10_20';
-  if (temp < 30) return '20_30';
-  return 'GT30';
-}
-function snapshotGood(c) {
-  // A settlement-time snapshot exists exactly for RESPONSE_VALID
-  // calls, its band is derived from its temperature, and its time is
-  // a valid ISO time within 48 hours before now.
-  const s = c.snapshot;
-  if (c.verdict === 'RESPONSE_VALID') {
-    if (!s || typeof s !== 'object') return false;
-    const temp = s.temperature_2m;
-    const tstr = s.time;
-    const wind = s.wind_speed_10m;
-    if (typeof temp !== 'number' || temp < -60 || temp > 60) return false;
-    if (typeof tstr !== 'string' || !tstr) return false;
-    if (wind !== null && wind !== undefined && (typeof wind !== 'number' || wind < 0)) return false;
-    if (bandOf(temp) !== c.temperature_band) return false;
-    const t = Date.parse(tstr);
-    if (Number.isNaN(t)) return false;
-    const ageMs = Date.now() - t;
-    if (ageMs < -3600 * 1000 || ageMs > 48 * 3600 * 1000) return false;
-    return true;
-  }
-  return s === null || s === undefined;
-}
 function leaderReceipt(tx) {
   let r = tx?.consensus_data?.leader_receipt;
   if (Array.isArray(r)) r = r.find((x) => x.mode === 'leader');
@@ -80,6 +52,15 @@ const onChain = await reader.getContractCode(ADDRESS);
 ok('byte parity (deployed code == repo source)', onChain === source);
 ok('source sha matches deployment.json', sha(source) === deployment.source_sha256);
 ok('deploy tx recorded', typeof txs.deploy_tx === 'string' && txs.deploy_tx.startsWith('0x'));
+
+const chainId = await reader.getChainId();
+ok('chain id is Stable Studionet 61999', chainId === CHAIN_ID);
+const deployReceipt = await reader.getTransaction({hash: deployment.deploy_tx});
+ok('deployment transaction FINALIZED+AGREE+SUCCESS',
+  [7, 'FINALIZED'].includes(deployReceipt.status)
+  && [6, 'MAJORITY_AGREE'].includes(deployReceipt.result)
+  && leaderReceipt(deployReceipt)?.execution_result === 'SUCCESS');
+ok('recorded deployment hashes agree', txs.deploy_tx === deployment.deploy_tx);
 
 // 2. Every recorded transaction, re-read live.
 const EXPECTED_ERROR = {
@@ -131,7 +112,7 @@ async function checkTxRecord(rec, where) {
   } else if (rec.result === 'disagreed-retry') {
     // Verified but NOT counted as a pass: the disagreement left the
     // call FUNDED (fail-closed) and the settlement was retried.
-    if ([5, 'MAJORITY_DISAGREE'].includes(tx.result)) {
+    if (finalized && [5, 'MAJORITY_DISAGREE'].includes(tx.result)) {
       note(`tx ${where}:${rec.label} is a recorded MAJORITY_DISAGREE retry (fail-closed, not counted as PASS)`);
     } else {
       ok(`tx ${where}:${rec.label} is a recorded MAJORITY_DISAGREE retry`, false, `result=${tx.result}`);
@@ -156,6 +137,17 @@ const browserTxs = Array.isArray(browser?.transactions) ? browser.transactions :
 // 3. Scripted final readback vs EXPECTED.md (latest-final reads).
 // These must pass on the scripted run alone, before any browser loop.
 const read = async (fn, args) => JSON.parse(await reader.readContract({address: ADDRESS, functionName: fn, args, transactionHashVariant: 'latest-final'}));
+const chainEndpoints = await read('get_all_endpoints', []);
+const endpointById = new Map(chainEndpoints.map((endpoint) => [Number(endpoint.endpoint_id), endpoint]));
+ok('latest-final endpoint readback has unique endpoint ids and URLs',
+  chainEndpoints.length >= 3 && endpointById.size === chainEndpoints.length
+  && chainEndpoints.every(endpoint => Number.isInteger(endpoint.endpoint_id)
+    && typeof endpoint.url === 'string' && endpoint.url.startsWith('https://api.open-meteo.com/v1/forecast')));
+// Only RESPONSE_VALID carries a timezone-local snapshot. The deliberately
+// unreachable E3 URL has no timezone and no snapshot; it must not fail an
+// aggregate timezone requirement. snapshotGood still requires an existing
+// chain-read endpoint for every call and an explicit valid timezone when
+// that call actually carries a valid-response snapshot.
 const expectCalls = {
   1: {status: 'SETTLED', verdict: 'RESPONSE_VALID', provider_credit: 3000000000000000000, buyer_credit: 0, has_required_fields: true},
   2: {status: 'SETTLED', verdict: 'RESPONSE_VALID', provider_credit: 3000000000000000000, buyer_credit: 0, has_required_fields: true},
@@ -174,7 +166,7 @@ for (const [id, e] of Object.entries(expectCalls)) {
     typeof c.temperature_band === 'string' && ['LT0', '0_10', '10_20', '20_30', 'GT30', 'NONE', ''].includes(c.temperature_band),
     c.temperature_band);
   ok(`call ${id} settlement-time snapshot is consistent with its verdict and band`,
-    snapshotGood(c), JSON.stringify(c.snapshot));
+    snapshotGood(c, endpointById.get(Number(c.endpoint_id))), JSON.stringify({snapshot: c.snapshot, endpoint: endpointById.get(Number(c.endpoint_id))?.url}));
 }
 const e1 = await read('get_endpoint', [1]);
 const e2 = await read('get_endpoint', [2]);
@@ -219,7 +211,7 @@ if (browserTxs.length === 0) {
       ok(`browser ${rec.label}: on-chain verdict == recorded ${rec.verdict}`,
         call.verdict === rec.verdict, JSON.stringify(call));
       ok(`browser ${rec.label}: settlement-time snapshot is consistent`,
-        snapshotGood(call), JSON.stringify(call.snapshot));
+        snapshotGood(call, endpointById.get(Number(call.endpoint_id))), JSON.stringify({snapshot: call.snapshot, endpoint: endpointById.get(Number(call.endpoint_id))?.url}));
     }
     if (m[1] === 'provider-withdraw') {
       ok(`browser ${rec.label}: provider credit withdrawn on-chain`, call.provider_withdrawn === true, JSON.stringify(call));
@@ -242,7 +234,7 @@ if (browserTxs.length === 0) {
       && c8.provider_credit === 2000000000000000000 && c8.buyer_credit === 0 && c8.has_required_fields === true,
       JSON.stringify(c8));
     ok('C8 (call 7) settlement-time snapshot is consistent',
-      snapshotGood(c8), JSON.stringify(c8.snapshot));
+      snapshotGood(c8, endpointById.get(Number(c8.endpoint_id))), JSON.stringify({snapshot: c8.snapshot, endpoint: endpointById.get(Number(c8.endpoint_id))?.url}));
   }
   if (byLabel['c7-provider-withdraw']) {
     const counts2 = await read('get_counts', []);
