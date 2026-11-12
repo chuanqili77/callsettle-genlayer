@@ -118,3 +118,9 @@ the endpoint again.
 The schema_note stored at listing is provider-written text, checked
 only for length (10–280 chars); it is not verified, and the endpoint
 URL is the source of truth.
+
+## Timezone and historical snapshot checks
+
+Run npm test for the real Python contract helpers and Node timezone regressions, then npm run verify for independent live receipts and latest-final snapshots. Snapshot timezone comes from each chain-read endpoint URL, never the verifier host clock. Historical records have no 48-hour expiry. Berlin/Chicago DST gaps and folds and Lord Howe half-hour transitions are covered by fixtures. An ambiguous fold is accepted as two possible instants, not assigned a fabricated UTC offset. The consistency verifier cannot prove physical weather accuracy.
+
+Live re-verification recorded 114 PASS and 0 FAIL; evidence/snapshot-verification-2026-11-13.json contains the scope and ledger. No contract change or redeployment was needed.

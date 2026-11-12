@@ -308,3 +308,9 @@ endpoint.
 | c7-call | [0xfa98bc90…](https://explorer-studio.genlayer.com/tx/0xfa98bc90936c661ed2637b5a446906bfba21d0d7a00a3a912556998b0cd8b469) | ok |
 | c7-settle | [0x2eefeffc…](https://explorer-studio.genlayer.com/tx/0x2eefeffc14b4e4341706a129adb9a914f7748dff4b777b04f7668cbd7722f51e) | ok · verdict RESPONSE_VALID (10_20) |
 | c7-provider-withdraw | [0xb5848089…](https://explorer-studio.genlayer.com/tx/0xb5848089abc875234e55729aa288f7fc3183a48cb44604b73bf5d6c34fe52d0f) | ok |
+
+## Historical snapshot re-verification
+
+Independent read-only verification on 2026-11-13 (Asia/Shanghai): 114 PASS, 0 FAIL, 31 scripted transactions and 4 browser transactions, plus deployment finality. The verifier fetched endpoint URLs from latest-final chain state, matched calls by endpoint_id, and checked stored historical snapshots using the endpoint IANA timezone without an age cutoff. The unreachable E3 has no RESPONSE_VALID snapshot and is not required to define a timezone. Original receipts and stored response snapshots are unchanged. The live ledger remains 18 GEN received = 18 GEN withdrawn, zero contract balance and escrow. See snapshot-verification-2026-11-13.json and .log in evidence/.
+
+This run also observed the published browser page transition from neutral UNCONFIRMED to FINALIZED with 4 endpoints, 7 calls, 1 violation and zero escrow; language switching and the stored C7 snapshot display worked. No new browser write was sent. The four recorded browser transactions are historical transactions independently re-read by the verifier.

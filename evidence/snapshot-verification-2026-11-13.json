@@ -1,0 +1,21 @@
+{
+  "observed_at": "2026-11-12T17:00:36.177063+00:00",
+  "network": "Stable Studionet",
+  "chain_id": 61999,
+  "contract_address": "0xe0c8716f8f1D8C64c8bd3F1eD7d063AFa2bC2A9E",
+  "deploy_tx": "0xd99bcf5080aecb86f83ed295bed71ae2a3df2308ecb68f4d23d655bd9f2b40d9",
+  "source_sha256": "90c67e3e6c48a65cf5c0c665ab80e4bcd8aa5ea8a00cac99fe0dcadbc3c2fe97",
+  "contract_changed": false,
+  "verification": {
+    "pass": 114,
+    "fail": 0,
+    "scripted_transactions": 31,
+    "browser_transactions": 4,
+    "snapshot_timezone_source": "latest-final get_all_endpoints; call.endpoint_id join",
+    "historical_snapshots_expire": false,
+    "received_wei": "18000000000000000000",
+    "withdrawn_wei": "18000000000000000000",
+    "balance_wei": "0"
+  },
+  "scope": "Independent live read-only re-verification. No new transaction or deployment."
+}

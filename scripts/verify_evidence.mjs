@@ -53,6 +53,15 @@ ok('byte parity (deployed code == repo source)', onChain === source);
 ok('source sha matches deployment.json', sha(source) === deployment.source_sha256);
 ok('deploy tx recorded', typeof txs.deploy_tx === 'string' && txs.deploy_tx.startsWith('0x'));
 
+const chainId = await reader.getChainId();
+ok('chain id is Stable Studionet 61999', chainId === CHAIN_ID);
+const deployReceipt = await reader.getTransaction({hash: deployment.deploy_tx});
+ok('deployment transaction FINALIZED+AGREE+SUCCESS',
+  [7, 'FINALIZED'].includes(deployReceipt.status)
+  && [6, 'MAJORITY_AGREE'].includes(deployReceipt.result)
+  && leaderReceipt(deployReceipt)?.execution_result === 'SUCCESS');
+ok('recorded deployment hashes agree', txs.deploy_tx === deployment.deploy_tx);
+
 // 2. Every recorded transaction, re-read live.
 const EXPECTED_ERROR = {
   'neg0-stranger-cancel': 'ONLY_BUYER_CAN_CANCEL',
@@ -103,7 +112,7 @@ async function checkTxRecord(rec, where) {
   } else if (rec.result === 'disagreed-retry') {
     // Verified but NOT counted as a pass: the disagreement left the
     // call FUNDED (fail-closed) and the settlement was retried.
-    if ([5, 'MAJORITY_DISAGREE'].includes(tx.result)) {
+    if (finalized && [5, 'MAJORITY_DISAGREE'].includes(tx.result)) {
       note(`tx ${where}:${rec.label} is a recorded MAJORITY_DISAGREE retry (fail-closed, not counted as PASS)`);
     } else {
       ok(`tx ${where}:${rec.label} is a recorded MAJORITY_DISAGREE retry`, false, `result=${tx.result}`);
@@ -130,11 +139,15 @@ const browserTxs = Array.isArray(browser?.transactions) ? browser.transactions :
 const read = async (fn, args) => JSON.parse(await reader.readContract({address: ADDRESS, functionName: fn, args, transactionHashVariant: 'latest-final'}));
 const chainEndpoints = await read('get_all_endpoints', []);
 const endpointById = new Map(chainEndpoints.map((endpoint) => [Number(endpoint.endpoint_id), endpoint]));
-ok('latest-final endpoint readback supplies timezone for every endpoint',
-  chainEndpoints.length >= 3 && chainEndpoints.every((endpoint) => {
-    try { return Boolean(new URL(endpoint.url).searchParams.get('timezone')); }
-    catch { return false; }
-  }), JSON.stringify(chainEndpoints.map((endpoint) => ({id: endpoint.endpoint_id, url: endpoint.url}))));
+ok('latest-final endpoint readback has unique endpoint ids and URLs',
+  chainEndpoints.length >= 3 && endpointById.size === chainEndpoints.length
+  && chainEndpoints.every(endpoint => Number.isInteger(endpoint.endpoint_id)
+    && typeof endpoint.url === 'string' && endpoint.url.startsWith('https://api.open-meteo.com/v1/forecast')));
+// Only RESPONSE_VALID carries a timezone-local snapshot. The deliberately
+// unreachable E3 URL has no timezone and no snapshot; it must not fail an
+// aggregate timezone requirement. snapshotGood still requires an existing
+// chain-read endpoint for every call and an explicit valid timezone when
+// that call actually carries a valid-response snapshot.
 const expectCalls = {
   1: {status: 'SETTLED', verdict: 'RESPONSE_VALID', provider_credit: 3000000000000000000, buyer_credit: 0, has_required_fields: true},
   2: {status: 'SETTLED', verdict: 'RESPONSE_VALID', provider_credit: 3000000000000000000, buyer_credit: 0, has_required_fields: true},

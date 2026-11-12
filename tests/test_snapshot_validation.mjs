@@ -43,4 +43,25 @@ assert.equal(snapshotGood({verdict: 'UNREACHABLE', snapshot: null}, berlin), tru
 assert.equal(snapshotGood({verdict: 'UNREACHABLE', snapshot: valid.snapshot}, berlin), false,
   'non-valid verdict cannot carry snapshot fields');
 
+for (const wind of [NaN, Infinity, -Infinity, '9', true, -0.1]) {
+  assert.equal(snapshotGood({...valid, snapshot: {...valid.snapshot, wind_speed_10m: wind}}, berlin), false);
+}
+for (const time of ['2026-04-31T12:00', '2026-01-00T12:00', '2026-13-01T00:00',
+  '2026-11-12T24:00', '2026-11-12T12:60', '2026-11-12T12:00:60', '2026-11-12T12:00Z']) {
+  assert.equal(snapshotGood({...valid, snapshot: {...valid.snapshot, time}}, berlin), false, time);
+}
+for (const temperature of [-60, 0, 10, 20, 30, 60]) {
+  const band = temperature < 0 ? 'LT0' : temperature < 10 ? '0_10' : temperature < 20 ? '10_20' : temperature < 30 ? '20_30' : 'GT30';
+  assert.equal(snapshotGood({...valid, temperature_band: band, snapshot: {...valid.snapshot, temperature_2m: temperature}}, berlin), true);
+}
+for (const temperature of [-60.1, 60.1, Infinity, -Infinity, '6', true]) {
+  assert.equal(snapshotGood({...valid, snapshot: {...valid.snapshot, temperature_2m: temperature}}, berlin), false);
+}
+assert.equal(utcCandidatesForLocalTime('2026-03-08T02:30', 'America/Chicago').length, 0);
+assert.equal(utcCandidatesForLocalTime('2026-11-01T01:30', 'America/Chicago').length, 2);
+assert.equal(utcCandidatesForLocalTime('2026-10-04T02:15', 'Australia/Lord_Howe').length, 0);
+assert.equal(utcCandidatesForLocalTime('2026-04-05T01:45', 'Australia/Lord_Howe').length, 2);
+assert.equal(snapshotGood({verdict: 'BOGUS', snapshot: null}, berlin), false);
+assert.equal(snapshotGood({verdict: 'UNREACHABLE', snapshot: null}, {url: 'https://api.open-meteo.com/v1/forecast?latitude=999'}), true);
+assert.equal(snapshotGood({verdict: 'UNREACHABLE', snapshot: null}, null), false);
 console.log('ALL SNAPSHOT VERIFIER TESTS PASS');

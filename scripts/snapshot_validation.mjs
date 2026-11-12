@@ -71,9 +71,11 @@ function bandOf(temp) {
 }
 
 export function snapshotGood(call, chainEndpoint) {
+  if (!chainEndpoint || typeof chainEndpoint.url !== 'string') return false;
   const snapshot = call?.snapshot;
   if (call?.verdict !== 'RESPONSE_VALID') {
-    return snapshot === null || snapshot === undefined;
+    return ['RESPONSE_INVALID', 'UNREACHABLE', ''].includes(call?.verdict)
+      && (snapshot === null || snapshot === undefined);
   }
   if (!snapshot || typeof snapshot !== 'object' || !chainEndpoint
       || typeof chainEndpoint.url !== 'string') return false;
