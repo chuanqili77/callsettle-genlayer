@@ -45,24 +45,33 @@ function bandOf(temp) {
   if (temp < 30) return '20_30';
   return 'GT30';
 }
+function validLocalApiTime(value) {
+  // Open-Meteo returns local wall time without an offset when a named
+  // timezone is requested. Validate the calendar fields without using
+  // Date.parse(), which would silently apply the verifier machine's TZ.
+  if (typeof value !== 'string') return false;
+  const m = value.match(/^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2})(?::(\\d{2}))?$/);
+  if (!m) return false;
+  const [, ys, mos, ds, hs, mis, ss = '0'] = m;
+  const y = Number(ys), mo = Number(mos), d = Number(ds);
+  const h = Number(hs), mi = Number(mis), sec = Number(ss);
+  if (mo < 1 || mo > 12 || h > 23 || mi > 59 || sec > 59) return false;
+  const days = new Date(Date.UTC(y, mo, 0)).getUTCDate();
+  return d >= 1 && d <= days;
+}
 function snapshotGood(c) {
-  // A settlement-time snapshot exists exactly for RESPONSE_VALID
-  // calls, its band is derived from its temperature, and its time is
-  // a valid ISO time within 48 hours before now.
+  // Historical snapshots remain verifiable indefinitely. Their source
+  // time is a timezone-local API value, not a verifier wall-clock age.
   const s = c.snapshot;
   if (c.verdict === 'RESPONSE_VALID') {
     if (!s || typeof s !== 'object') return false;
     const temp = s.temperature_2m;
     const tstr = s.time;
     const wind = s.wind_speed_10m;
-    if (typeof temp !== 'number' || temp < -60 || temp > 60) return false;
-    if (typeof tstr !== 'string' || !tstr) return false;
-    if (wind !== null && wind !== undefined && (typeof wind !== 'number' || wind < 0)) return false;
+    if (typeof temp !== 'number' || !Number.isFinite(temp) || temp < -60 || temp > 60) return false;
+    if (!validLocalApiTime(tstr)) return false;
+    if (wind !== null && wind !== undefined && (typeof wind !== 'number' || !Number.isFinite(wind) || wind < 0)) return false;
     if (bandOf(temp) !== c.temperature_band) return false;
-    const t = Date.parse(tstr);
-    if (Number.isNaN(t)) return false;
-    const ageMs = Date.now() - t;
-    if (ageMs < -3600 * 1000 || ageMs > 48 * 3600 * 1000) return false;
     return true;
   }
   return s === null || s === undefined;
