@@ -67,13 +67,22 @@ export interface Counts {
 // MetaMask-snap helper, which this app never calls). Retrying the
 // whole read absorbs the blip instead of leaving a stale error line
 // next to an otherwise good FINALIZED readback.
+//
+// Timeout note (2026-11-12, after a real-browser first load stalled
+// 7+ minutes on "waiting for FINALIZED readback"): a hung RPC fetch
+// throws nothing, so the retry loop above never ran. Every read is
+// therefore raced against a 30s timeout, so a hung read fails fast
+// and the retry loop actually runs. A late response from a timed-out
+// attempt is ignored.
+const withTimeout = <T,>(p: Promise<T>, ms: number, what: string): Promise<T> =>
+  Promise.race([p, new Promise<T>((_, rej) => setTimeout(() => rej(new Error('READ_TIMEOUT: ' + what)), ms))]);
 export async function readAll(): Promise<{ endpoints: EndpointRec[]; calls: CallRec[]; counts: Counts; is_finalized_readback: boolean; at: string }> {
   let lastErr: unknown = null;
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      const rawE = await reader.readContract({ address: contractAddress() as `0x${string}`, functionName: 'get_all_endpoints', args: [], transactionHashVariant: 'latest-final' as any });
-      const rawC = await reader.readContract({ address: contractAddress() as `0x${string}`, functionName: 'get_all_calls', args: [], transactionHashVariant: 'latest-final' as any });
-      const rawN = await reader.readContract({ address: contractAddress() as `0x${string}`, functionName: 'get_counts', args: [], transactionHashVariant: 'latest-final' as any });
+      const rawE = await withTimeout(reader.readContract({ address: contractAddress() as `0x${string}`, functionName: 'get_all_endpoints', args: [], transactionHashVariant: 'latest-final' as any }), 30000, 'get_all_endpoints');
+      const rawC = await withTimeout(reader.readContract({ address: contractAddress() as `0x${string}`, functionName: 'get_all_calls', args: [], transactionHashVariant: 'latest-final' as any }), 30000, 'get_all_calls');
+      const rawN = await withTimeout(reader.readContract({ address: contractAddress() as `0x${string}`, functionName: 'get_counts', args: [], transactionHashVariant: 'latest-final' as any }), 30000, 'get_counts');
       const endpoints = JSON.parse(rawE as unknown as string) as EndpointRec[];
       const calls = JSON.parse(rawC as unknown as string) as CallRec[];
       const counts = JSON.parse(rawN as unknown as string) as Counts;
