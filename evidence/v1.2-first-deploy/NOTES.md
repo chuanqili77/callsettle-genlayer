@@ -32,3 +32,14 @@ unbounded network stall.
 The files in this directory are the partial records of the
 abandoned attempt (deployment.json, transactions.json with the 20
 transactions that did finalize).
+
+## Update (2026-11-12): stuck tx resolved, contract closed
+
+The stuck c6-call (0xdb9a69b9...) eventually FINALIZED: call 6 appeared
+FUNDED on this contract. It was then settled (0x299a87b85644647f32bba7647b28d962c99aaece49cc43999dbfee345249cb89,
+RESPONSE_VALID) and the 3 GEN provider credit withdrawn
+(0x8e64924da2f6f9030035d704e96e1eff477b593486fa866797c875d27875e802).
+Final ledger: 16 GEN in = 16 GEN out, balance 0, escrow 0. The retained
+checkpoint file holding the first-deploy temp keys was deleted after
+the withdrawal FINALIZED. This contract remains abandoned; no further
+action.

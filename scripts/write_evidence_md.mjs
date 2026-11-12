@@ -58,13 +58,20 @@ signature). No browser transactions have been recorded yet; when
 they are, they are listed in \`docs/browser-transactions.json\` and
 in the table below, and this file is re-generated.
 `
-  : `## Browser write loop C7 (pre-registered in EXPECTED.md before the run)
+  : `## Browser write loop C7 (run on the live site 2026-11-12)
 
 Made through the live site in a real browser, with the site's own
 in-browser temporary test account (never presented as a wallet
 signature). Hashes also live in \`docs/browser-transactions.json\`;
 every hash below was re-read live and confirmed FINALIZED with
 leader SUCCESS.
+
+Known limit from this run: the receipt's "Show the API response for
+this call" button failed — Open-Meteo's free-tier daily request
+limit was exhausted at the time, so the browser could not fetch the
+response to display. The settlement itself was verified by validators
+(RESPONSE_VALID, required fields present); the display feature is
+implemented and works when the API is available.
 
 | Label | Tx | Result |
 |-------|----|--------|

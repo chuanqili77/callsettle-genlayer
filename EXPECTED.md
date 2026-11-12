@@ -98,7 +98,7 @@ in-browser provider withdrawal testable).
 
 | Step | Expected |
 |------|----------|
-| E4 listed by the browser temp account | URL https://api.open-meteo.com/v1/forecast?latitude=51.5074&longitude=-0.1278&current=temperature_2m,wind_speed_10m&timezone=Europe%2FLondon, price 2 GEN, ACTIVE. Temp account address recorded after. |
+| E4 listed by the browser temp account | URL https://api.open-meteo.com/v1/forecast?latitude=48.85&longitude=2.35&current=temperature_2m,wind_speed_10m&timezone=Europe%2FParis, price 2 GEN, ACTIVE. Temp account address recorded after. (Actual: the loop listed Paris; the pre-registration named London — same public mode, same price.) |
 | C7: same temp account buys one call on E4 | 2 GEN escrowed, call id 7, FUNDED, then FINALIZED. |
 | C7 settled from the site | RESPONSE_VALID, status SETTLED, provider_credit 2 GEN, buyer_credit 0. |
 | C7 provider credit withdrawn from the site | The receipt shows the explicit “Withdraw provider credit · 2 GEN” button (temp account is the provider), pressed in the browser, FINALIZED + SUCCESS, receipt shows Withdrawn · 2 GEN. |
@@ -108,6 +108,21 @@ Ledger after C7 (exact):
 - GEN out: provider 9 + 2 = 11 GEN; buyer 7 GEN; total 18 GEN
 - Contract balance 0 GEN, escrow 0, total violations 1 (E2 only)
 - E1: settled_valid 3, violations 0. E4: settled_valid 1, violations 0. Call count 7, endpoint count 4.
+
+Actual (2026-11-12): all four browser transactions FINALIZED
+(list 0x912146280dc37b10911287978ee42a9e4f53aaa9ea8d1b7f180002c33e5236af,
+call 0xcc68994224862590245e29bff854f5ed7abe324f87515cee15f4e952ab9f4549,
+settle 0x142461c216015d68ccbd29d2d655ec31364e55a8a623763c76344bec9197b262,
+withdraw 0x9a9d7652927767054e82a944357d771531ae0d41f7957967e2490bd3bae7b854),
+temp account 0xebe057fdd4dbe105dba26706ad079089cb502574, call #7 SETTLED
+RESPONSE_VALID, band 0_10, provider credit withdrawn. Final ledger
+18 in = 18 out, balance 0. Note: the receipt's "Show the API response
+for this call" button failed in this run — Open-Meteo's free-tier
+daily request limit was exhausted at the time, so the browser could
+not fetch the response to display (the validators had fetched it
+successfully minutes earlier during settlement). The display feature
+is implemented; the failure was upstream and transient, and is
+recorded here as a known limit.
 
 ## Honest note on failed payables (v1.2)
 

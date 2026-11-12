@@ -9,14 +9,14 @@
   (`node scripts/byte_parity.mjs`).
 - Evidence run: 31 transactions recorded
   (21 ok, 10 error-observed, 0 disagreed-retry),
-  all FINALIZED. Browser write loop: 0 transactions
+  all FINALIZED. Browser write loop: 4 transactions
   recorded in `docs/browser-transactions.json`. Independent verification:
   `node scripts/verify_evidence.mjs` re-reads every transaction live
   and re-checks the readback below.
 - Expectations were pre-registered in EXPECTED.md before the run; every
   outcome below matched.
 
-## Final readback (latest-final, generated from live state at 2026-11-12T07:11:02.806Z)
+## Final readback (latest-final, generated from live state at 2026-11-12T07:42:34.555Z)
 
 ```json
 {
@@ -116,6 +116,22 @@
       "status": "SETTLED",
       "temperature_band": "0_10",
       "verdict": "RESPONSE_VALID"
+    },
+    {
+      "buyer": "0xebe057fdd4dbe105dba26706ad079089cb502574",
+      "buyer_credit": 0,
+      "buyer_withdrawn": false,
+      "call_id": 7,
+      "endpoint_id": 4,
+      "has_required_fields": true,
+      "price_gen": 2,
+      "price_wei": 2000000000000000000,
+      "provider": "0xebe057fdd4dbe105dba26706ad079089cb502574",
+      "provider_credit": 2000000000000000000,
+      "provider_withdrawn": true,
+      "status": "SETTLED",
+      "temperature_band": "0_10",
+      "verdict": "RESPONSE_VALID"
     }
   ],
   "endpoints": [
@@ -154,29 +170,42 @@
       "status": "ACTIVE",
       "url": "https://api.open-meteo.com/v1/forecast?latitude=999&longitude=999",
       "violations": 0
+    },
+    {
+      "calls": 1,
+      "endpoint_id": 4,
+      "price_gen": 2,
+      "price_wei": 2000000000000000000,
+      "provider": "0xebe057fdd4dbe105dba26706ad079089cb502574",
+      "schema_note": "Single public mode: HTTP 200, JSON, current.temperature_2m is a number in -60..60, current.time is a string. Paris current weather, no key.",
+      "settled_valid": 1,
+      "status": "ACTIVE",
+      "url": "https://api.open-meteo.com/v1/forecast?latitude=48.85&longitude=2.35&current=temperature_2m,wind_speed_10m&timezone=Europe%2FParis",
+      "violations": 0
     }
   ],
   "counts": {
-    "call_count": 6,
+    "call_count": 7,
     "contract_balance_wei": 0,
-    "endpoint_count": 3,
+    "endpoint_count": 4,
     "escrowed_wei": 0,
-    "total_received_wei": 16000000000000000000,
+    "total_received_wei": 18000000000000000000,
     "total_violations": 1,
-    "total_withdrawn_wei": 16000000000000000000
+    "total_withdrawn_wei": 18000000000000000000
   }
 }
 ```
 
 ## Ledger (exact, computed from the live readback above)
 
-- GEN in through the contract's accounting: 16
-- GEN withdrawn through the contract's accounting: 16
+- GEN in through the contract's accounting: 18
+- GEN withdrawn through the contract's accounting: 18
 - Contract balance: 0 GEN, escrowed: 0 GEN, total violations: 1
 - E1: settled_valid 3, violations 0.
 - E2: settled_valid 0, violations 1.
 - E3: settled_valid 0, violations 0.
-- Calls: 6, endpoints: 3.
+- E4: settled_valid 1, violations 0.
+- Calls: 7, endpoints: 4.
 - No value stranded: every failed-payable negative sent 0 GEN by
   design. (Platform behavior, stated honestly in the contract
   docstring: a failed payable call keeps its value in the contract
@@ -236,11 +265,24 @@
 | Unreachable endpoint (E3, Open-Meteo forecast with latitude 999, HTTP 400) | UNREACHABLE, buyer refunded, no violation | settled UNREACHABLE, see C4 |
 | Injection text inside a response body | Verdict follows the JSON schema only; instruction text cannot flip it | Mock test in tests/test_callsettle_mock.py (deterministic check, no LLM in the path) |
 
-## Browser write loop C7 (pre-registered in EXPECTED.md, not yet run)
+## Browser write loop C7 (run on the live site 2026-11-12)
 
-After the scripted evidence run, one more endpoint and call are made
-through the live site in a real browser, with the site's own
+Made through the live site in a real browser, with the site's own
 in-browser temporary test account (never presented as a wallet
-signature). No browser transactions have been recorded yet; when
-they are, they are listed in `docs/browser-transactions.json` and
-in the table below, and this file is re-generated.
+signature). Hashes also live in `docs/browser-transactions.json`;
+every hash below was re-read live and confirmed FINALIZED with
+leader SUCCESS.
+
+Known limit from this run: the receipt's "Show the API response for
+this call" button failed — Open-Meteo's free-tier daily request
+limit was exhausted at the time, so the browser could not fetch the
+response to display. The settlement itself was verified by validators
+(RESPONSE_VALID, required fields present); the display feature is
+implemented and works when the API is available.
+
+| Label | Tx | Result |
+|-------|----|--------|
+| e4-list | [0x91214628…](https://explorer-studio.genlayer.com/tx/0x912146280dc37b10911287978ee42a9e4f53aaa9ea8d1b7f180002c33e5236af) | ok |
+| c7-call | [0xcc689942…](https://explorer-studio.genlayer.com/tx/0xcc68994224862590245e29bff854f5ed7abe324f87515cee15f4e952ab9f4549) | ok |
+| c7-settle | [0x142461c2…](https://explorer-studio.genlayer.com/tx/0x142461c216015d68ccbd29d2d655ec31364e55a8a623763c76344bec9197b262) | ok · verdict RESPONSE_VALID (0_10) |
+| c7-provider-withdraw | [0x9a9d7652…](https://explorer-studio.genlayer.com/tx/0x9a9d7652927767054e82a944357d771531ae0d41f7957967e2490bd3bae7b854) | ok |

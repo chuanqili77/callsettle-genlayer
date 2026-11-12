@@ -179,6 +179,8 @@ export default function App() {
       try {
         const d = await loadDeployment();
         setDep(d);
+        setMyTxs(loadMyTxs());
+        setPending(loadPendingTxs());
         await refresh();
         try {
           const res = await fetch('./transactions.json', { cache: 'no-store' });

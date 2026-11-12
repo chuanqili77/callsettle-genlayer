@@ -98,21 +98,29 @@ export async function readAll(): Promise<{ endpoints: EndpointRec[]; calls: Call
 
 // ---- Tx lifecycle: hash saved immediately, timeout is "unknown" ----
 export interface PendingTx { hash: string; label: string; savedAt: string }
-const PENDING_KEY = 'callsettle-pending-txs';
+// History is scoped to the deployed contract address: records from a
+// superseded deployment must never render on the live site as if they
+// belonged to this one. Before the deployment loads, the ':unloaded'
+// key holds nothing, so a cold start never shows stale records.
+const scopedKey = (base: string) => {
+  const addr = DEPLOYMENT?.contract_address?.toLowerCase();
+  return addr ? base + ':' + addr : base + ':unloaded';
+};
+const pendingKey = () => scopedKey('callsettle-pending-txs');
 export function savePendingTx(hash: string, label: string) {
   try {
-    const list: PendingTx[] = JSON.parse(localStorage.getItem(PENDING_KEY) || '[]');
+    const list: PendingTx[] = JSON.parse(localStorage.getItem(pendingKey()) || '[]');
     if (!list.some((p) => p.hash === hash)) list.push({ hash, label, savedAt: new Date().toISOString() });
-    localStorage.setItem(PENDING_KEY, JSON.stringify(list));
+    localStorage.setItem(pendingKey(), JSON.stringify(list));
   } catch { /* storage unavailable: hash is still shown on screen */ }
 }
 export function loadPendingTxs(): PendingTx[] {
-  try { return JSON.parse(localStorage.getItem(PENDING_KEY) || '[]'); } catch { return []; }
+  try { return JSON.parse(localStorage.getItem(pendingKey()) || '[]'); } catch { return []; }
 }
 export function clearPendingTx(hash: string) {
   try {
-    const list: PendingTx[] = JSON.parse(localStorage.getItem(PENDING_KEY) || '[]');
-    localStorage.setItem(PENDING_KEY, JSON.stringify(list.filter((p) => p.hash !== hash)));
+    const list: PendingTx[] = JSON.parse(localStorage.getItem(pendingKey()) || '[]');
+    localStorage.setItem(pendingKey(), JSON.stringify(list.filter((p) => p.hash !== hash)));
   } catch { /* ignore */ }
 }
 
@@ -123,20 +131,20 @@ export function clearPendingTx(hash: string) {
 // from the post-tx readback) so a receipt can always link its real
 // transactions. Nothing here leaves the browser.
 export interface MyTx { hash: string; label: string; savedAt: string; result: string }
-const MY_TXS_KEY = 'callsettle-my-txs';
+const myTxsKey = () => scopedKey('callsettle-my-txs');
 export function saveMyTx(hash: string, label: string) {
   try {
-    const list: MyTx[] = JSON.parse(localStorage.getItem(MY_TXS_KEY) || '[]');
+    const list: MyTx[] = JSON.parse(localStorage.getItem(myTxsKey()) || '[]');
     const at = new Date().toISOString();
     const i = list.findIndex((p) => p.hash === hash);
     if (i >= 0) list[i] = { hash, label, savedAt: list[i].savedAt || at, result: list[i].result || 'ok' };
     else list.push({ hash, label, savedAt: at, result: 'ok' });
-    localStorage.setItem(MY_TXS_KEY, JSON.stringify(list.slice(-200)));
+    localStorage.setItem(myTxsKey(), JSON.stringify(list.slice(-200)));
   } catch { /* storage unavailable: hash is still shown on screen */ }
 }
 export function loadMyTxs(): MyTx[] {
   try {
-    return (JSON.parse(localStorage.getItem(MY_TXS_KEY) || '[]') as MyTx[])
+    return (JSON.parse(localStorage.getItem(myTxsKey()) || '[]') as MyTx[])
       .map((m) => ({ ...m, result: m.result || 'ok' }));
   } catch { return []; }
 }
