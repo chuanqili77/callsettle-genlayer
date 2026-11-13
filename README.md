@@ -159,12 +159,13 @@ truth.
   cannot be listed meaningfully, because validators fetch without
   credentials.
 - v1.3 has no endpoint delist action: a listed endpoint stays ACTIVE.
-  A provider that wants to stop selling simply stops being called; no
-  funds are at risk from a stale listing because every call is paid
-  per call and settled against the live response.
-- A call left FUNDED whose buyer disappears can still be settled by
-  anyone, so funds are never stuck; the buyer can also cancel it
-  while FUNDED.
+  Providers cannot prevent new calls to a stale listing. Each new call
+  is funded separately and checked against the live response; buyers
+  should inspect the endpoint before funding it.
+- Anyone can attempt settlement of a FUNDED call, and its buyer can
+  cancel it while FUNDED. Settlement still requires a finalized
+  consensus result; disagreement or network unavailability can delay
+  release. Pull credits require the entitled account to withdraw.
 - A temperature band can flip near a boundary value; a flip only
   produces a consensus disagreement and a retry.
 - A settlement-time snapshot exists only for RESPONSE_VALID
