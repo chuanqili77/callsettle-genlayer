@@ -314,3 +314,21 @@ endpoint.
 Independent read-only verification on 2026-11-13 (Asia/Shanghai): 114 PASS, 0 FAIL, 31 scripted transactions and 4 browser transactions, plus deployment finality. The verifier fetched endpoint URLs from latest-final chain state, matched calls by endpoint_id, and checked stored historical snapshots using the endpoint IANA timezone without an age cutoff. The unreachable E3 has no RESPONSE_VALID snapshot and is not required to define a timezone. Original receipts and stored response snapshots are unchanged. The live ledger remains 18 GEN received = 18 GEN withdrawn, zero contract balance and escrow. See snapshot-verification-2026-11-13.json and .txt in evidence/.
 
 This run also observed the published browser page transition from neutral UNCONFIRMED to FINALIZED with 4 endpoints, 7 calls, 1 violation and zero escrow; language switching and the stored C7 snapshot display worked. No new browser write was sent. The four recorded browser transactions are historical transactions independently re-read by the verifier.
+
+## Post-run recheck: buyer receipt display (2026-11-13, 08:29–08:31 CST)
+
+One item was left unproven at v1.3 delivery: whether a buyer opening
+receipt #7 (on-chain call_id 7, E4 Paris, SETTLED, RESPONSE_VALID)
+in a real browser actually sees the settlement-time API snapshot.
+Checked live on the deployed v1.3 site (contract
+`0xe0c8716f8f1D8C64c8bd3F1eD7d063AFa2bC2A9E`): opening "View receipt"
+(the button's current label; there is no button literally called
+"Show the API response") shows "Settlement-time verified API snapshot"
+— temperature 10.9°C, time 2026-11-12T16:15, wind_speed_10m 17.8 km/h,
+band 10_20 — with the raw JSON consistent, and no HTTP 429 or daily
+limit error. This is the v1.2 failure mode closed: v1.2 re-fetched
+Open-Meteo from the browser and hit the shared-network daily limit
+(HTTP 429); v1.3 reads the snapshot from the chain and never
+re-fetches, so the display no longer depends on the browser's network.
+No evidence transaction or verified readback above was changed by
+this recheck.
